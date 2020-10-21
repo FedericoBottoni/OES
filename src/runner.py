@@ -12,6 +12,7 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 
+from TBoard import TBoard
 from ReplayMemory import ReplayMemory
 from DQN import DQN
 
@@ -24,25 +25,7 @@ EPS_DECAY = 200
 TARGET_UPDATE = 10
 
 
-def plot_durations(episode_durations, is_ipython):
-    plt.figure(2)
-    plt.clf()
-    durations_t = torch.tensor(episode_durations, dtype=torch.float)
-    plt.title('Training...')
-    plt.xlabel('Episode')
-    plt.ylabel('Duration')
-    plt.plot(durations_t.numpy())
-    # Take 100 episode averages and plot them too
-    if len(durations_t) >= 100:
-        means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
-        means = torch.cat((torch.zeros(99), means))
-        plt.plot(means.numpy())
-
-    plt.pause(0.001)  # pause a bit so that plots are updated
-    if is_ipython:
-        display.clear_output(wait=True)
-        display.display(plt.gcf())
-
+Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
 def run():
     with open('config.json') as json_file:
@@ -56,14 +39,11 @@ def run():
     if is_ipython:
         from IPython import display
 
+    tb = TBoard()
     plt.ion()
 
     # if gpu is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    Transition = namedtuple('Transition',
-                            ('state', 'action', 'next_state', 'reward'))
-
 
     observation = env.reset()
 
@@ -134,7 +114,7 @@ def run():
 
         # Compute Huber loss
         loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
-
+        
         # Optimize the model
         optimizer.zero_grad()
         loss.backward()
@@ -147,7 +127,7 @@ def run():
         # Initialize the environment and state
         observation = env.reset()
         state = torch.from_numpy(observation).float()
-        for t in count():
+        for i_step in count():
             # Select and perform an action + observe new state
             action = select_action(state, steps_done)
             observation, reward, done, _ = env.step(action.item())
@@ -167,8 +147,7 @@ def run():
             # Perform one step of the optimization (on the target network)
             optimize_model()
             if done:
-                episode_durations.append(t + 1)
-                plot_durations(episode_durations, is_ipython)
+                tb.push_episode_len([i_step+1])
                 break
         # Update the target network, copying all weights and biases in DQN
         if i_episode % TARGET_UPDATE == 0:

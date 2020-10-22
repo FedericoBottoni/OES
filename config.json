@@ -1,3 +1,8 @@
 {
-    "gym_environment": "CartPole-v0"
+    "gym_environment": "CartPole-v0",
+    "enable_tensorboard": true,
+    "stop_condition": {
+        "reward_threshold": 50,
+        "n_episodes": 50 
+    }
 }

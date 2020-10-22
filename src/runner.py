@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import json
+from functools import partial
 from collections import namedtuple
 from itertools import count
 from PIL import Image
@@ -12,6 +13,7 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 
+import early_stopping
 from TBoard import TBoard
 from ReplayMemory import ReplayMemory
 from DQN import DQN
@@ -23,14 +25,20 @@ EPS_START = 0.9
 EPS_END = 0.05
 EPS_DECAY = 200
 TARGET_UPDATE = 10
+num_episodes = 500
 
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
+      
 
 def run():
     with open('config.json') as json_file:
         config = json.load(json_file)
+        enable_tb = config['enable_tensorboard']
         gym_environment = config['gym_environment']
+        stop_condition = [config['stop_condition']['reward_threshold'], config['stop_condition']['n_episodes']]
+
+    eval_stop_condition_bound = partial(early_stopping.eval_stop_condition, stop_condition)
 
     env = gym.make(gym_environment).unwrapped
 
@@ -39,7 +47,7 @@ def run():
     if is_ipython:
         from IPython import display
 
-    tb = TBoard()
+    tb = TBoard(enable_tb)
     plt.ion()
 
     # if gpu is to be used
@@ -65,7 +73,6 @@ def run():
         sample = random.random()
         eps_threshold = EPS_END + (EPS_START - EPS_END) * \
             math.exp(-1. * steps_done / EPS_DECAY)
-        steps_done += 1
         if sample > eps_threshold:
             with torch.no_grad():
                 # t.max(1) will return largest column value of each row.
@@ -112,8 +119,8 @@ def run():
         # Compute the expected Q values
         expected_state_action_values = (next_state_values * GAMMA) + reward_batch
 
-        # Compute Huber loss
-        loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
+        # Compute loss
+        loss = F.mse_loss(state_action_values, expected_state_action_values.unsqueeze(1))
         
         # Optimize the model
         optimizer.zero_grad()
@@ -122,17 +129,23 @@ def run():
             param.grad.data.clamp_(-1, 1)
         optimizer.step()
 
-    num_episodes = 50
+    early_stop = False
+    i_earlystop = 0
     for i_episode in range(num_episodes):
+
         # Initialize the environment and state
+        cm_reward = torch.zeros([1])
         observation = env.reset()
         state = torch.from_numpy(observation).float()
         for i_step in count():
+
             # Select and perform an action + observe new state
             action = select_action(state, steps_done)
+            steps_done += 1
+
             observation, reward, done, _ = env.step(action.item())
             reward = torch.tensor([reward], device=device)
-
+            cm_reward += reward
             if not done:
                 next_state = torch.from_numpy(observation).float()
             else:
@@ -146,12 +159,20 @@ def run():
 
             # Perform one step of the optimization (on the target network)
             optimize_model()
+
+            tb.push_cm_reward(cm_reward.numpy())
             if done:
+                early_stop, i_earlystop = eval_stop_condition_bound(cm_reward, i_earlystop)
+                tb.push_cm_reward_ep(cm_reward.numpy())
                 tb.push_episode_len([i_step+1])
                 break
+
         # Update the target network, copying all weights and biases in DQN
         if i_episode % TARGET_UPDATE == 0:
             target_net.load_state_dict(policy_net.state_dict())
+        if early_stop:
+            early_stopping.on_stop(i_episode)
+            break
 
     print('Complete')
     env.render()

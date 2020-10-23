@@ -20,22 +20,23 @@ from DQN import DQN
 
 
 BATCH_SIZE = 64
+ALPHA = 0.01
 GAMMA = 0.999
 EPS_START = 0.9
 EPS_END = 0.05
 EPS_DECAY = 200
 TARGET_UPDATE = 10
-num_episodes = 500
 
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
-      
 
 def run():
     with open('config.json') as json_file:
         config = json.load(json_file)
         enable_tb = config['enable_tensorboard']
         gym_environment = config['gym_environment']
+        action_dict = config['action_names']
+        num_episodes = config['training_episodes']
         stop_condition = [config['stop_condition']['reward_threshold'], config['stop_condition']['n_episodes']]
 
     eval_stop_condition_bound = partial(early_stopping.eval_stop_condition, stop_condition)
@@ -64,7 +65,8 @@ def run():
     target_net.load_state_dict(policy_net.state_dict())
     target_net.eval()
 
-    optimizer = optim.RMSprop(policy_net.parameters())
+    # optimizer = optim.RMSprop(policy_net.parameters())
+    optimizer = optim.Adam(policy_net.parameters(), lr=ALPHA, )
     memory = ReplayMemory(10000)
 
     steps_done = 0
@@ -82,10 +84,7 @@ def run():
         else:
             return torch.tensor([[random.randrange(n_actions)]], device=device, dtype=torch.long)
 
-
-    episode_durations = []
-
-    def optimize_model():
+    def optimize_model(tb):
         if len(memory) < BATCH_SIZE:
             return
         transitions = memory.sample(BATCH_SIZE)
@@ -108,7 +107,6 @@ def run():
         # columns of actions taken. These are the actions which would've been taken
         # for each batch state according to policy_net
         state_action_values = policy_net(state_batch.view(-1, obs_length)).gather(1, action_batch)
-
         # Compute V(s_{t+1}) for all next states.
         # Expected values of actions for non_final_next_states are computed based
         # on the "older" target_net; selecting their best reward with max(1)[0].
@@ -121,7 +119,11 @@ def run():
 
         # Compute loss
         loss = F.mse_loss(state_action_values, expected_state_action_values.unsqueeze(1))
-        
+
+        # Plot
+        tb.plot_q_values(action_dict, state_action_values, action_batch)
+        tb.push_loss(loss.item())
+
         # Optimize the model
         optimizer.zero_grad()
         loss.backward()
@@ -158,13 +160,13 @@ def run():
             state = next_state
 
             # Perform one step of the optimization (on the target network)
-            optimize_model()
+            optimize_model(tb)
 
-            tb.push_cm_reward(cm_reward.numpy())
+            tb.push_cm_reward(cm_reward.item())
             if done:
                 early_stop, i_earlystop = eval_stop_condition_bound(cm_reward, i_earlystop)
-                tb.push_cm_reward_ep(cm_reward.numpy())
-                tb.push_episode_len([i_step+1])
+                tb.push_cm_reward_ep(cm_reward.item())
+                tb.push_episode_len(i_step+1)
                 break
 
         # Update the target network, copying all weights and biases in DQN

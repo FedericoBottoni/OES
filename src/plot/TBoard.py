@@ -46,24 +46,16 @@ class TBoard(object):
     def push_episode_len(self, dataset):
         self.push_scalar("Episode/Episode Length", self._n_episode_len, dataset)
         self._n_episode_len += 1
-    
-    def push_q_value_mean(self, labels, datasets):
-        self.push_scalars("Reward/Q-Value Mean", labels, self._q_value_mean, datasets)
-        self._q_value_mean += 1
 
     def push_q_value_mean_dict(self, my_dict):
         self.push_scalars_dict("Reward/Q-Value Mean", self._q_value_mean, my_dict)
         self._q_value_mean += 1
     
-    def push_q_value_var(self, labels, datasets):
-        self.push_scalars("Reward/Q-Value Var", labels, self._q_value_var, datasets)
-        self._q_value_var += 1
-    
     def push_q_value_var_dict(self, my_dict):
         self.push_scalars_dict("Reward/Q-Value Var", self._q_value_mean, my_dict)
         self._q_value_mean += 1
 
-    def plot_q_values(self, action_dict, state_action_values, action_batch):
+    def push_q_values(self, action_dict, state_action_values, action_batch):
         q_values = state_action_values.view(1, -1)[0]
         q_labels = action_batch.view(1, -1)[0]
         single_action_labels = torch.unique(q_labels)

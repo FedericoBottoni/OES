@@ -2,8 +2,6 @@ import gym
 import math
 import random
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
 import json
 from functools import partial
 from collections import namedtuple
@@ -31,25 +29,24 @@ TARGET_UPDATE = 10
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
 def run():
+
     with open('config.json') as json_file:
         config = json.load(json_file)
-        enable_tb = config['enable_tensorboard']
+        enable_plots = config['enable_plots']
         gym_environment = config['gym_environment']
         action_dict = config['action_names']
+        action_dict_tags = np.array(list(action_dict.items()))[:, 1]
         num_episodes = config['training_episodes']
         stop_condition = [config['stop_condition']['reward_threshold'], config['stop_condition']['n_episodes']]
+        save_model = config['save_model']['active']
+        if save_model:
+            save_model_path = config['save_model']['path']
 
     eval_stop_condition_bound = partial(early_stopping.eval_stop_condition, stop_condition)
 
     env = gym.make(gym_environment).unwrapped
 
-    # set up matplotlib
-    is_ipython = 'inline' in matplotlib.get_backend()
-    if is_ipython:
-        from IPython import display
-
-    tb = TBoard(enable_tb)
-    plt.ion()
+    c_plot = TBoard(enable_plots)
 
     # if gpu is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -64,6 +61,13 @@ def run():
     target_net = DQN(obs_length, n_actions).to(device)
     target_net.load_state_dict(policy_net.state_dict())
     target_net.eval()
+
+    # c_plot.add_state2d_action_values_plots(action_dict_tags)
+    # for tag in action_dict_tags:
+    #    print(tag)
+    # for i in range(10):
+    #     c_plot.push_state2d_action_values(action_dict_tags[0], (i % 2, i % 3, i), i)
+    # print("done")
 
     # optimizer = optim.RMSprop(policy_net.parameters())
     optimizer = optim.Adam(policy_net.parameters(), lr=ALPHA, )
@@ -84,7 +88,7 @@ def run():
         else:
             return torch.tensor([[random.randrange(n_actions)]], device=device, dtype=torch.long)
 
-    def optimize_model(tb):
+    def optimize_model(c_plot):
         if len(memory) < BATCH_SIZE:
             return
         transitions = memory.sample(BATCH_SIZE)
@@ -121,8 +125,8 @@ def run():
         loss = F.mse_loss(state_action_values, expected_state_action_values.unsqueeze(1))
 
         # Plot
-        tb.plot_q_values(action_dict, state_action_values, action_batch)
-        tb.push_loss(loss.item())
+        c_plot.push_q_values(action_dict, state_action_values, action_batch)
+        c_plot.push_loss(loss.item())
 
         # Optimize the model
         optimizer.zero_grad()
@@ -160,13 +164,13 @@ def run():
             state = next_state
 
             # Perform one step of the optimization (on the target network)
-            optimize_model(tb)
+            optimize_model(c_plot)
 
-            tb.push_cm_reward(cm_reward.item())
+            c_plot.push_cm_reward(cm_reward.item())
             if done:
                 early_stop, i_earlystop = eval_stop_condition_bound(cm_reward, i_earlystop)
-                tb.push_cm_reward_ep(cm_reward.item())
-                tb.push_episode_len(i_step+1)
+                c_plot.push_cm_reward_ep(cm_reward.item())
+                c_plot.push_episode_len(i_step+1)
                 break
 
         # Update the target network, copying all weights and biases in DQN
@@ -175,9 +179,9 @@ def run():
         if early_stop:
             early_stopping.on_stop(i_episode)
             break
-
+    if save_model:
+        torch.save(policy_net.state_dict(), save_model_path)
+        print('Model saved in:', save_model_path)
     print('Complete')
     env.render()
     env.close()
-    plt.ioff()
-    plt.show()

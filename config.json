@@ -1,13 +1,17 @@
 {
-    "gym_environment": "CartPole-v0",
+    "gym_environment": "CartPole-v1",
     "action_names": {
         "0": "Left",
         "1": "Right"
     },
-    "enable_tensorboard": true,
-    "training_episodes": 1000,
+    "enable_plots": true,
+    "training_episodes": 4000,
     "stop_condition": {
         "reward_threshold": 150,
         "n_episodes": 50 
+    },
+    "save_model": {
+        "active": false,
+        "path": "models/experiment.pth"
     }
 }

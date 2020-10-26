@@ -16,16 +16,6 @@ from TBoard import TBoard
 from ReplayMemory import ReplayMemory
 from DQN import DQN
 
-
-BATCH_SIZE = 64
-ALPHA = 0.01
-GAMMA = 0.999
-EPS_START = 0.9
-EPS_END = 0.05
-EPS_DECAY = 200
-TARGET_UPDATE = 10
-
-
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
 def run():
@@ -39,6 +29,7 @@ def run():
         num_episodes = config['training_episodes']
         stop_condition = [config['stop_condition']['reward_threshold'], config['stop_condition']['n_episodes']]
         save_model = config['save_model']['active']
+        hyperparams = config['network_hyperparams']
         if save_model:
             save_model_path = config['save_model']['path']
 
@@ -69,6 +60,8 @@ def run():
     #     c_plot.push_state2d_action_values(action_dict_tags[0], (i % 2, i % 3, i), i)
     # print("done")
 
+    ALPHA = hyperparams['ALPHA']
+
     # optimizer = optim.RMSprop(policy_net.parameters())
     optimizer = optim.Adam(policy_net.parameters(), lr=ALPHA, )
     memory = ReplayMemory(10000)
@@ -77,8 +70,12 @@ def run():
 
     def select_action(state, steps_done):
         sample = random.random()
+        EPS_END = hyperparams['EPS_END']
+        EPS_DECAY = hyperparams['EPS_DECAY']
+        EPS_START = hyperparams['EPS_START']
         eps_threshold = EPS_END + (EPS_START - EPS_END) * \
             math.exp(-1. * steps_done / EPS_DECAY)
+        # print(eps_threshold)
         if sample > eps_threshold:
             with torch.no_grad():
                 # t.max(1) will return largest column value of each row.
@@ -89,6 +86,8 @@ def run():
             return torch.tensor([[random.randrange(n_actions)]], device=device, dtype=torch.long)
 
     def optimize_model(c_plot):
+        BATCH_SIZE = hyperparams['BATCH_SIZE']
+        GAMMA = hyperparams['GAMMA']
         if len(memory) < BATCH_SIZE:
             return
         transitions = memory.sample(BATCH_SIZE)
@@ -174,7 +173,7 @@ def run():
                 break
 
         # Update the target network, copying all weights and biases in DQN
-        if i_episode % TARGET_UPDATE == 0:
+        if i_episode % hyperparams['TARGET_UPDATE'] == 0:
             target_net.load_state_dict(policy_net.state_dict())
         if early_stop:
             early_stopping.on_stop(i_episode)

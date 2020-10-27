@@ -1,4 +1,7 @@
 def eval_stop_condition(stop_condition, cm_reward, i_episode):
+    if stop_condition[0] == None and stop_condition[1] == None:
+        return False, i_episode + 1
+        
     stop = False
     if cm_reward >= stop_condition[0]:
         next_episode = i_episode + 1

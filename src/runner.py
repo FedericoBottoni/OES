@@ -19,7 +19,6 @@ from DQN import DQN
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
 def run():
-
     with open('config.json') as json_file:
         config = json.load(json_file)
         enable_plots = config['enable_plots']
@@ -27,6 +26,7 @@ def run():
         action_dict = config['action_names']
         action_dict_tags = np.array(list(action_dict.items()))[:, 1]
         num_episodes = config['training_episodes']
+        max_steps = config['max_steps']
         stop_condition = [config['stop_condition']['reward_threshold'], config['stop_condition']['n_episodes']]
         save_model = config['save_model']['active']
         hyperparams = config['network_hyperparams']
@@ -136,12 +136,15 @@ def run():
 
     early_stop = False
     i_earlystop = 0
+
     for i_episode in range(num_episodes):
 
         # Initialize the environment and state
         cm_reward = torch.zeros([1])
         observation = env.reset()
         state = torch.from_numpy(observation).float()
+
+        
         for i_step in count():
 
             # Select and perform an action + observe new state
@@ -149,6 +152,8 @@ def run():
             steps_done += 1
 
             observation, reward, done, _ = env.step(action.item())
+            done = done or max_steps > 0 and i_step >= max_steps
+            
             reward = torch.tensor([reward], device=device)
             cm_reward += reward
             if not done:
@@ -166,6 +171,7 @@ def run():
             optimize_model(c_plot)
 
             c_plot.push_cm_reward(cm_reward.item())
+            
             if done:
                 early_stop, i_earlystop = eval_stop_condition_bound(cm_reward, i_earlystop)
                 c_plot.push_cm_reward_ep(cm_reward.item())

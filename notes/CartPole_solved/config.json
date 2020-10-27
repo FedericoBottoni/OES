@@ -1,24 +1,22 @@
 {
-    "gym_environment": "MountainCar-v0",
+    "gym_environment": "CartPole-v1",
     "action_names": {
         "0": "Left",
-        "1": "Nothing",
-        "2": "Right"
+        "1": "Right"
     },
-    "enable_plots": true,
-    "training_episodes": 300,
-    "max_steps": 700000,
+    "enable_plots": false,
+    "training_episodes": 4000,
     "stop_condition": {
-        "reward_threshold": null,
-        "n_episodes": null 
+        "reward_threshold": 195,
+        "n_episodes": 100 
     },
     "save_model": {
-        "active": true,
+        "active": false,
         "path": "models/experiment.pth"
     },
     "network_hyperparams": {
         "BATCH_SIZE": 64,
-        "ALPHA": 0.0001,
+        "ALPHA": 0.001,
         "GAMMA": 0.9999,
         "EPS_START": 0.9,
         "EPS_END": 0.05,

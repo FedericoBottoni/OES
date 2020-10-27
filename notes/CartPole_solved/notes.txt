@@ -1,0 +1,2 @@
+Loss = F.mse_loss
+Optimizer = optim.Adam

@@ -38,32 +38,8 @@ class CustomPlot(TBoard):
             if self._state2d_action_values_plots[elem_i][0] == tag:
                 elem_index = elem_i
         tag, _, ax, surf, X, Y, Z = self._state2d_action_values_plots[elem_index]
-        x_indxs = np.where(X == data_tpl[0])[0]
-        y_indxs = np.where(Y == data_tpl[1])[0]
-        next_Z = data_tpl[2]
-        print('data_tpl', data_tpl)
-        print("y_indxs", y_indxs)
-        if len(x_indxs) > 0 and len(y_indxs) > 0:
-            if len(y_indxs) > 0:
-                Z[x_indxs[0], y_indxs[0]] = next_Z
-            else: # NO Y
-                Y = np.append(Y, [data_tpl[1]])
-                next_row = np.zeros(X.size)
-                next_row[X.size - 1] = next_Z
-                Z = np.vstack((Z, next_row))
-        elif len(y_indxs) > 0: # NO X
-            X = np.append(X, [data_tpl[0]])
-            next_col = np.zeros((1, Y.size))
-            next_col[Y.size - 1] = next_Z
-            Z[:,:-1] = next_col
-            # Z[X.size  - 1, y_indxs[0]] = next_Z
-        else: # NO X and Y
-            X = np.append(X, [data_tpl[0]])
-            Y = np.append(Y, [data_tpl[1]])
-            new_z = np.zeros((X.size, Y.size))
-            new_z[0:X.size - 1, 0:Y.size - 1] = Z
-            new_z[X.size - 1, Y.size - 1] = next_Z
-            Z = new_z
+        
+        Z[data_tpl[0], data_tpl[1]] = data_tpl[2]
         
         self._state2d_action_values_plots[elem_index][4] = X
         self._state2d_action_values_plots[elem_index][5] = Y

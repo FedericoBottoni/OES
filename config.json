@@ -6,8 +6,8 @@
         "2": "Right"
     },
     "enable_plots": true,
-    "training_episodes": 300,
-    "max_steps": 700000,
+    "training_episodes": 1100,
+    "max_steps": 100000,
     "stop_condition": {
         "reward_threshold": null,
         "n_episodes": null 
@@ -16,13 +16,16 @@
         "active": true,
         "path": "models/experiment.pth"
     },
+    "parallel": {
+        "n_instances" : 2
+    },
     "network_hyperparams": {
-        "BATCH_SIZE": 64,
+        "BATCH_SIZE": 4,
         "ALPHA": 0.0001,
         "GAMMA": 0.9999,
         "EPS_START": 0.9,
-        "EPS_END": 0.05,
-        "EPS_DECAY": 2000,
+        "EPS_END": 0.02,
+        "EPS_DECAY": 3000,
         "TARGET_UPDATE": 10
     }
 }

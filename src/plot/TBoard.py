@@ -16,6 +16,10 @@ class TBoard(object):
         self._q_value_mean = 0
         self._q_value_var = 0
 
+    def dispose(self):
+        self._writer.flush()
+        self._writer.close()
+
     def push_scalar(self, tag, n_step, data):
         if(self._tb_activated):
             self._writer.add_scalar(tag, data, n_step)

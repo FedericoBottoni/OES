@@ -7,9 +7,9 @@ class DQN(nn.Module):
         self.layers = nn.Sequential(
             nn.Linear(input_len, 24),
             nn.Tanh(),
-            nn.Linear(24, 48),
+            nn.Linear(24, 12),
             nn.Tanh(),
-            nn.Linear(48, output_len)
+            nn.Linear(12, output_len)
         )
 
 

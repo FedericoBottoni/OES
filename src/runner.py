@@ -2,6 +2,8 @@ import gym
 import math
 import random
 import numpy as np
+import time
+import atexit
 import json
 from functools import partial
 from collections import namedtuple
@@ -19,6 +21,7 @@ from DQN import DQN
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
 def run():
+    start = time.time()
     with open('config.json') as json_file:
         config = json.load(json_file)
         enable_plots = config['enable_plots']
@@ -149,6 +152,9 @@ def run():
     loss = np.zeros([n_instances])
     ep_cm_reward_dict = {}
     last_ep_i_step = 0
+
+    
+    atexit.register(dispose, c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
     for i_step in count():
         for p in range(n_instances):
 
@@ -206,15 +212,7 @@ def run():
             early_stopping.on_stop(i_episode.mean())
             break
 
-    if save_model:
-        torch.save(policy_net[0].state_dict(), save_model_path)
-        print('Model saved in:', save_model_path)
-    for p in range(n_instances):
-        env[p].render()
-        env[p].close()
-        print('Closing env', p)
-    c_plot.dispose()
-    print('Complete')
+    dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
 
 
 def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, cm_reward, n_instances, i_step):
@@ -234,3 +232,15 @@ def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, cm_reward, n_instan
         removed = np.array([])
         
     return ep_cm_reward_dict, removed
+
+def dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode):
+    if save_model:
+        torch.save(policy_net[0].state_dict(), save_model_path)
+        print('Model saved in:', save_model_path)
+    for p in range(n_instances):
+        env[p].render()
+        env[p].close()
+        print('Closing env #', p, 'at episode', i_episode[p])
+    c_plot.dispose()   
+    end = time.time()
+    print('Time elapsed', int(end - start), 's')

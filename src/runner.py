@@ -57,11 +57,15 @@ def run():
     EPS_START = hyperparams['EPS_START']
     
     for i in range(n_instances):
-        env[i] = gym.make(gym_environment).unwrapped
+        if max_steps != None and max_steps > 0:
+            env[i] = gym.make(gym_environment)
+            env[i]._max_episode_steps = max_steps
+        else:
+            env[i] = gym.make(gym_environment).unwrapped
         observation[i] = env[i].reset()
 
     c_plot = TBoard(enable_plots)
-
+    
     # if gpu is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -167,12 +171,11 @@ def run():
 
 
             action = select_action(p, state[p], i_step)
-
             observation[p], reward, done, _ = env[p].step(action.item())
-            done = done or max_steps > 0 and ep_step[p] >= max_steps
-            
+
             reward = torch.tensor([reward], device=device)
             cm_reward[p] += reward
+
             if not done:
                 next_state = torch.from_numpy(observation[p]).float()
             else:
@@ -191,7 +194,7 @@ def run():
                 loss = np.zeros([n_instances])
 
             if done:
-                print('process p', p, 'has done ep', i_episode[p])
+                print('Env #', p, 'has solved the episode', i_episode[p])
                 ep_cm_reward_dict, last_cm_rewards = sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, cm_reward, \
                     n_instances, i_step - last_ep_i_step)
                 if last_cm_rewards.size != 0:
@@ -223,8 +226,8 @@ def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, cm_reward, n_instan
     ep_cm_reward_dict[ep_key][p] = cm_reward[p]
 
     if not None in ep_cm_reward_dict[ep_key]:
-        print('all processes are done', ep_cm_reward_dict[ep_key])
         removed = np.array(ep_cm_reward_dict[ep_key])
+        print('Closing episode', ep_key, 'with cm_rew', removed)
         c_plot.push_cm_reward_ep(removed.mean())
         c_plot.push_episode_len(i_step+1)
         ep_cm_reward_dict.pop(ep_key)

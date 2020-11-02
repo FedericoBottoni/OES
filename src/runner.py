@@ -14,9 +14,10 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 import early_stopping
-from TBoard import TBoard
+from CustomPlot import CustomPlot
 from ReplayMemory import ReplayMemory
 from DQN import DQN
+from MountainCarDiscretizer import MountainCarDiscretizer
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
@@ -64,7 +65,7 @@ def run():
             env[i] = gym.make(gym_environment).unwrapped
         observation[i] = env[i].reset()
 
-    c_plot = TBoard(enable_plots)
+    c_plot = CustomPlot(enable_plots)
     
     # if gpu is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -81,12 +82,13 @@ def run():
         optimizer[p] = optim.Adam(policy_net[p].parameters(), lr=ALPHA, )
         memory[p] = ReplayMemory(10000)
 
-    def select_action(p, state, steps_done):
+    def select_action(p, state, steps_done, apply_eps=True):
         sample = random.random()
-        eps_threshold = EPS_END + (EPS_START - EPS_END) * \
-            math.exp(-1. * steps_done / EPS_DECAY)
-        # print(eps_threshold)
-        if sample > eps_threshold:
+        if apply_eps:
+            eps_threshold = EPS_END + (EPS_START - EPS_END) * \
+                math.exp(-1. * steps_done / EPS_DECAY)
+            # print(eps_threshold)
+        if not apply_eps or sample > eps_threshold:
             with torch.no_grad():
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
@@ -156,13 +158,13 @@ def run():
     loss = np.zeros([n_instances])
     ep_cm_reward_dict = {}
     last_ep_i_step = 0
-
+    procs_done = np.zeros([n_instances])
     
     atexit.register(dispose, c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
     for i_step in count():
         for p in range(n_instances):
-
-            if i_episode[p] > num_episodes:
+            if i_episode[p] == num_episodes:
+                procs_done[p] = 1
                 pass
             
             if ep_step[p] == 0:
@@ -208,12 +210,20 @@ def run():
 
             if i_episode[p] % hyperparams['TARGET_UPDATE'] == 0:
                 target_net[p].load_state_dict(policy_net[p].state_dict())
-
-        
+        if len(np.nonzero(procs_done)[0]) == n_instances:
+            break
         c_plot.push_cm_reward(cm_reward.mean())
         if early_stop:
             early_stopping.on_stop(i_episode.mean())
             break
+
+    end = time.time()
+    print('Time elapsed', int(end - start), 's')
+    best_env = 0
+    mc_disc = MountainCarDiscretizer(env[best_env], [15, 15])
+    select_action_bound = lambda st : select_action(best_env, st, 0, apply_eps=False).item()
+    c_plot.plot_state_actions(mc_disc, select_action_bound, policy_net[best_env], action_dict_tags)
+    
 
     dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
 
@@ -238,12 +248,11 @@ def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, cm_reward, n_instan
 
 def dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode):
     if save_model:
-        torch.save(policy_net[0].state_dict(), save_model_path)
-        print('Model saved in:', save_model_path)
+        env_saved = np.argmax(i_episode)
+        torch.save(policy_net[env_saved].state_dict(), save_model_path)
+        print('Model #', env_saved, 'saved in:', save_model_path)
     for p in range(n_instances):
-        env[p].render()
+        #env[p].render()
         env[p].close()
         print('Closing env #', p, 'at episode', i_episode[p])
     c_plot.dispose()   
-    end = time.time()
-    print('Time elapsed', int(end - start), 's')

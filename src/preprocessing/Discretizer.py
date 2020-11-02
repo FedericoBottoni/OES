@@ -14,7 +14,7 @@ class Discretizer():
             bins = map(function, _uniform_bins)
         else:
             bins = _uniform_bins
-        self._bins = bins
+        self.bins = bins
 
     def disc(self, nums):
-        return np.digitize(nums, self._bins)
+        return np.digitize(nums, self.bins)

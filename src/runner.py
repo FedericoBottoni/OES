@@ -56,6 +56,8 @@ def run():
     EPS_END = hyperparams['EPS_END']
     EPS_DECAY = hyperparams['EPS_DECAY']
     EPS_START = hyperparams['EPS_START']
+    BATCH_SIZE = hyperparams['BATCH_SIZE']
+    GAMMA = hyperparams['GAMMA']
     
     for i in range(n_instances):
         if max_steps != None and max_steps > 0:
@@ -98,14 +100,9 @@ def run():
             return torch.tensor([[random.randrange(n_actions)]], device=device, dtype=torch.long)
 
     def optimize_model(p, c_plot):
-        BATCH_SIZE = hyperparams['BATCH_SIZE']
-        GAMMA = hyperparams['GAMMA']
         if len(memory[p]) < BATCH_SIZE:
             return None
         transitions = memory[p].sample(BATCH_SIZE)
-        # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
-        # detailed explanation). This converts batch-array of Transitions
-        # to Transition of batch-arrays.
         batch = Transition(*zip(*transitions))
 
         # Compute a mask of non-final states and concatenate the batch elements
@@ -118,17 +115,13 @@ def run():
         action_batch = torch.cat(batch.action)
         reward_batch = torch.cat(batch.reward)
 
-        # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
-        # columns of actions taken. These are the actions which would've been taken
-        # for each batch state according to policy_net
+        # Compute Q(s_t, a)
         state_action_values = policy_net[p](state_batch.view(-1, obs_length)).gather(1, action_batch)
+
         # Compute V(s_{t+1}) for all next states.
-        # Expected values of actions for non_final_next_states are computed based
-        # on the "older" target_net; selecting their best reward with max(1)[0].
-        # This is merged based on the mask, such that we'll have either the expected
-        # state value or 0 in case the state was final.
         next_state_values = torch.zeros(BATCH_SIZE, device=device)
         next_state_values[non_final_mask] = target_net[p](non_final_next_states.view(-1, obs_length)).max(1)[0].detach()
+
         # Compute the expected Q values
         expected_state_action_values = (next_state_values * GAMMA) + reward_batch
 

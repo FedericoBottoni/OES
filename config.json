@@ -16,8 +16,14 @@
         "active": true,
         "path": "models/experiment.pth"
     },
-    "parallel": {
-        "n_instances" : 3
+    "transfer_hyperparams":{
+        "N_PROCESSES" : 3,
+        "CONFIDENCE" : 5,
+        "NUM_CV" : 100,
+        "TRANSFER_SIZE" : 5,
+        "THETA_START": 0.5,
+        "THETA_END": 0.001,
+        "THETA_DECAY": 4000
     },
     "network_hyperparams": {
         "BATCH_SIZE": 32,

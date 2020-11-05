@@ -17,6 +17,7 @@ import early_stopping
 from CustomPlot import CustomPlot
 from ReplayMemory import ReplayMemory
 from DQN import DQN
+from PTL import PTL
 from MountainCarDiscretizer import MountainCarDiscretizer
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
@@ -33,7 +34,7 @@ def run():
         max_steps = config['max_steps']
         stop_condition = [config['stop_condition']['reward_threshold'], config['stop_condition']['n_episodes']]
         save_model = config['save_model']['active']
-        parallel = config['parallel']
+        transfer_hyperparams = config['transfer_hyperparams']
         hyperparams = config['network_hyperparams']
         if save_model:
             save_model_path = config['save_model']['path']
@@ -41,8 +42,8 @@ def run():
     eval_stop_condition_bound = partial(early_stopping.eval_stop_condition, stop_condition)
 
     n_instances = 1
-    if parallel != None:
-        n_instances = parallel['n_instances']
+    if transfer_hyperparams != None:
+        n_instances = transfer_hyperparams['N_PROCESSES']
 
     env = [None] * n_instances
     observation = [None] * n_instances
@@ -68,6 +69,10 @@ def run():
         observation[i] = env[i].reset()
 
     c_plot = CustomPlot(enable_plots)
+    mc_disc = MountainCarDiscretizer(env[0], [3, 3])
+    ptl = None
+    if transfer_hyperparams:
+        ptl = PTL(mc_disc, n_instances, transfer_hyperparams)
     
     # if gpu is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -179,6 +184,9 @@ def run():
             # Store the transition in memory
             memory[p].push(state[p], action, next_state, reward)
 
+            if ptl:
+                ptl.update_state_visits(p, state[p])
+
             # Move to the next state
             state[p] = next_state
 
@@ -203,9 +211,15 @@ def run():
 
             if i_episode[p] % hyperparams['TARGET_UPDATE'] == 0:
                 target_net[p].load_state_dict(policy_net[p].state_dict())
+            
+        if not ptl is None:
+            ptl.transfer(policy_net, i_step)
+
         if len(np.nonzero(procs_done)[0]) == n_instances:
             break
+
         c_plot.push_cm_reward(cm_reward.mean())
+
         if early_stop:
             early_stopping.on_stop(i_episode.mean())
             break
@@ -213,11 +227,9 @@ def run():
     end = time.time()
     print('Time elapsed', int(end - start), 's')
     best_env = 0
-    mc_disc = MountainCarDiscretizer(env[best_env], [15, 15])
     select_action_bound = lambda st : select_action(best_env, st, 0, apply_eps=False).item()
     c_plot.plot_state_actions(mc_disc, select_action_bound, policy_net[best_env], action_dict_tags)
     
-
     dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
 
 

@@ -1,4 +1,5 @@
 from Discretizer import Discretizer
+import torch
 
 class MountainCarDiscretizer():
     def __init__(self, env, n_state_bins, function=None):
@@ -9,5 +10,5 @@ class MountainCarDiscretizer():
     def get_bins(self):
         return [self.position_disc.bins, self.speed_disc.bins]
 
-    def disc(self, position, speed):
-        return [self.position_disc.disc(position), self.speed_disc.disc(speed)]
+    def disc(self, state):
+        return torch.tensor([self.position_disc.disc(state[0]), self.speed_disc.disc(state[1])], dtype=torch.float)

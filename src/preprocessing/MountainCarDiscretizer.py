@@ -11,4 +11,7 @@ class MountainCarDiscretizer():
         return [self.position_disc.bins, self.speed_disc.bins]
 
     def disc(self, state):
-        return torch.tensor([self.position_disc.disc(state[0]), self.speed_disc.disc(state[1])], dtype=torch.float)
+        return torch.tensor([self.position_disc.disc(state[0].item()), self.speed_disc.disc(state[1].item())], dtype=torch.float)
+    
+    def disc_index(self, state):
+        return [self.position_disc.disc_index(state[0].item()), self.speed_disc.disc_index(state[1].item())]

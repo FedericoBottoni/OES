@@ -17,4 +17,8 @@ class Discretizer():
         self.bins = bins
 
     def disc(self, nums):
-        return self.bins[np.digitize(nums, self.bins)]
+        return self.bins[self.disc_index(nums)]
+
+    def disc_index(self, nums):
+        out = np.digitize(nums, self.bins, right=True)
+        return out if out < self.n_bins else self.n_bins - 1

@@ -1,6 +1,6 @@
 import numpy as np
 from collections import namedtuple
-import itertools
+import gym
 import torch
 import random
 import math
@@ -14,14 +14,13 @@ class PTL():
         self._n_instances = n_instances
         self._discretizer = discretizer
         self._CONFIDENCE = transfer_hyperparams['CONFIDENCE']
-        self._NUM_CV = transfer_hyperparams['NUM_CV']
         self._TRANSFER_SIZE = transfer_hyperparams['TRANSFER_SIZE']
         self._THETA_START = transfer_hyperparams['THETA_START']
         self._THETA_END = transfer_hyperparams['THETA_END']
         self._THETA_DECAY = transfer_hyperparams['THETA_DECAY']
         self.elegibility = [False] * n_instances
         self._state_visits = [None] * n_instances
-        
+
         for p in range(n_instances):
             self._state_visits[p] = np.zeros(shape=tuple(self._discretizer.size), dtype=int)
 
@@ -43,42 +42,39 @@ class PTL():
                 math.exp(-1. * steps_done / self._THETA_DECAY)
 
     def update_state_visits(self, p, state):
-        st_index = [[st] for st in self.get_index_from_state(state)] 
+        st_index = tuple(self.get_index_from_state(state))
         self._state_visits[p][st_index] += 1
         if not self.elegibility[p]:
-            self.elegibility[p] = (self._state_visits[p][st_index] >= self._CONFIDENCE)[0]
+            self.elegibility[p] = self._state_visits[p][st_index] >= self._CONFIDENCE
 
     def merge(self, sending_p, received_qs, local_qs):
         states = [st[0] for st in received_qs]
         out_qs = list()
         for i_st in range(len(states)):
-            st_index = [[st] for st in self.get_index_from_state(states[i_st])]
-            out_qs.append(received_qs[i_st].q + (self._state_visits[sending_p][st_index] / self._NUM_CV) * (local_qs[i_st].q - received_qs[i_st].q))
+            st_index = tuple(self.get_index_from_state(states[i_st]))
+            out_qs.append(received_qs[i_st].q + (self._state_visits[sending_p][st_index] / self._CONFIDENCE) * (local_qs[i_st].q - received_qs[i_st].q))
         return out_qs
 
     def select_senders(self):
         return [i for i, x in enumerate(self.elegibility) if x and self.allow_transfer()]
 
     def select_receivers(self, sender):
-        procs = list(range(self._n_instances))
-        return procs[procs != sender]
+        return [i for i in range(self._n_instances) if i != sender and self.allow_transfer()]
 
     def transfer(self, policy_nets, step):
         senders = self.select_senders()
         for sender in senders:
-            #print("transfering start")
             receivers = self.select_receivers(sender)
             
             sending_knowledge = self.select_q_subtable(sender, policy_nets[sender])
 
-            merged_knowledge = [None] *  self._n_instances
-            for receiver in range(receivers):
+            merged_knowledge = [None] * len(receivers)
+            for receiver in range(len(receivers)):
                 local_knowledge = self.sample_q_subtable(receiver, policy_nets[receiver], sending_knowledge)
                 #print('sending_knowledge', sending_knowledge)
                 #print('local_knowledge', local_knowledge)
                 merged_knowledge[receiver] = self.merge(sender, sending_knowledge, local_knowledge)
             
-            #print("transfering end")
         self.compute_theta_decay(step)
     
     def sample_q_subtable(self, p, policy_net, qvals):

@@ -19,7 +19,6 @@
     "transfer_hyperparams":{
         "N_PROCESSES" : 3,
         "CONFIDENCE" : 5,
-        "NUM_CV" : 100,
         "TRANSFER_SIZE" : 5,
         "THETA_START": 0.5,
         "THETA_END": 0.001,

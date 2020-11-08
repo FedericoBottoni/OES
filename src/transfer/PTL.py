@@ -8,7 +8,7 @@ import math
 QVal = namedtuple('QVal', ('state', 'action', 'q'))
 
 class PTL():
-    def __init__(self, discretizer, n_instances, transfer_hyperparams):
+    def __init__(self, discretizer, n_instances, transfer_hyperparams, gym_environment, get_state_from_obs):
         if n_instances <= 1:
             raise Exception('instance number cannot be less then 2')
         self._n_instances = n_instances
@@ -20,6 +20,10 @@ class PTL():
         self._THETA_DECAY = transfer_hyperparams['THETA_DECAY']
         self.elegibility = [False] * n_instances
         self._state_visits = [None] * n_instances
+
+        self._virtual_env = gym.make(gym_environment).unwrapped
+        self._virtual_env.reset()
+        self._get_state_from_obs = get_state_from_obs
 
         for p in range(n_instances):
             self._state_visits[p] = np.zeros(shape=tuple(self._discretizer.size), dtype=int)
@@ -63,19 +67,18 @@ class PTL():
 
     def transfer(self, policy_nets, step):
         senders = self.select_senders()
+        out_data = list()
         for sender in senders:
             receivers = self.select_receivers(sender)
             
-            sending_knowledge = self.select_q_subtable(sender, policy_nets[sender])
+            sending_data = self.select_q_subtable(sender, policy_nets[sender])
 
-            merged_knowledge = [None] * len(receivers)
             for receiver in range(len(receivers)):
-                local_knowledge = self.sample_q_subtable(receiver, policy_nets[receiver], sending_knowledge)
-                #print('sending_knowledge', sending_knowledge)
-                #print('local_knowledge', local_knowledge)
-                merged_knowledge[receiver] = self.merge(sender, sending_knowledge, local_knowledge)
-            
+                # local_data = self.sample_q_subtable(receiver, policy_nets[receiver], sending_data)
+                # out_data[receiver] = self.merge(sender, sending_data, local_data)
+                out_data.append((receiver, self.parse_out_data(receiver, sending_data)))
         self.compute_theta_decay(step)
+        return out_data
     
     def sample_q_subtable(self, p, policy_net, qvals):
         states = []
@@ -114,3 +117,11 @@ class PTL():
         len_qs = len(qs)
         k = len_qs if len_qs < self._TRANSFER_SIZE else self._TRANSFER_SIZE
         return torch.topk(qs, k)[1].tolist()
+    
+    def parse_out_data(self, receiver, sending_data):
+        out = list()
+        for qv in sending_data:
+            observation, reward, _, _ = self._virtual_env.step(qv.action)
+            out.append((qv.state, torch.tensor([[qv.action]]), \
+                torch.from_numpy(self._get_state_from_obs(observation)).float(), torch.tensor([reward])))
+        return out

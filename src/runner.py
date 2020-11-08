@@ -22,6 +22,9 @@ from src.preprocessing.MountainCarDiscretizer import MountainCarDiscretizer
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
+def get_state_from_obs(obs):
+    return obs
+
 def run():
     start = time.time()
     with open('config.json') as json_file:
@@ -72,7 +75,7 @@ def run():
     mc_disc = MountainCarDiscretizer(env[0], [3, 3])
     ptl = None
     if transfer_hyperparams:
-        ptl = PTL(mc_disc, n_instances, transfer_hyperparams)
+        ptl = PTL(mc_disc, n_instances, transfer_hyperparams, gym_environment, get_state_from_obs)
     
     # if gpu is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -211,9 +214,13 @@ def run():
 
             if i_episode[p] % hyperparams['TARGET_UPDATE'] == 0:
                 target_net[p].load_state_dict(policy_net[p].state_dict())
-            
-        if not ptl is None:
-            ptl.transfer(policy_net, i_step)
+
+        # Parallel Transfer Learning updates the memories
+        p_transitions = ptl.transfer(policy_net, i_step)
+        for p_trs in p_transitions:
+            (p, transitions) = p_trs
+            for tr in transitions:
+                memory[p].push(tr[0], tr[1], tr[2], tr[3])
 
         if len(np.nonzero(procs_done)[0]) == n_instances:
             break

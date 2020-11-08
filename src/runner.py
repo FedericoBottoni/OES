@@ -13,12 +13,12 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 
-import early_stopping
-from CustomPlot import CustomPlot
-from ReplayMemory import ReplayMemory
-from DQN import DQN
-from PTL import PTL
-from MountainCarDiscretizer import MountainCarDiscretizer
+import src.early_stopping as early_stopping
+from src.plot.CustomPlot import CustomPlot
+from src.ReplayMemory import ReplayMemory
+from src.DQN import DQN
+from src.transfer.PTL import PTL
+from src.preprocessing.MountainCarDiscretizer import MountainCarDiscretizer
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 

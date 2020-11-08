@@ -1,4 +1,4 @@
-from Discretizer import Discretizer
+from src.preprocessing.Discretizer import Discretizer
 import torch
 
 class MountainCarDiscretizer():

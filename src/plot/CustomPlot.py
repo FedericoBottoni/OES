@@ -5,7 +5,7 @@ from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import matplotlib
-from TBoard import TBoard
+from src.plot.TBoard import TBoard
 
 markers = ['o', 'v', 'd']
 

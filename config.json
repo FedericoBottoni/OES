@@ -1,5 +1,5 @@
 {
-    "gym_environment": "MountainCar-v0",
+    "gym_environment": "MountainCarCustom-v0",
     "action_names": {
         "0": "Left",
         "1": "Nothing",

@@ -17,13 +17,11 @@ import src.early_stopping as early_stopping
 from src.plot.CustomPlot import CustomPlot
 from src.ReplayMemory import ReplayMemory
 from src.DQN import DQN
-from src.transfer.PTL import PTL
 from src.preprocessing.MountainCarDiscretizer import MountainCarDiscretizer
+from src.transfer.baseline import PTL
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
-def get_state_from_obs(obs):
-    return obs
 
 def run():
     start = time.time()
@@ -53,7 +51,8 @@ def run():
     policy_net = [None] * n_instances
     target_net = [None] * n_instances
     optimizer = [None] * n_instances
-    memory = [None] * n_instances
+    replay_memory = [None] * n_instances
+    transfer_memory = [None] * n_instances
     state = [None] * n_instances
     
     ALPHA = hyperparams['ALPHA']
@@ -62,7 +61,9 @@ def run():
     EPS_START = hyperparams['EPS_START']
     BATCH_SIZE = hyperparams['BATCH_SIZE']
     GAMMA = hyperparams['GAMMA']
-    STATE_DIM_BINS = transfer_hyperparams['STATE_DIM_BINS']
+    STATE_DIM_BINS = config['STATE_DIM_BINS']
+
+    DELAY_PERIOD = transfer_hyperparams['DELAY_PERIOD']
     
     for i in range(n_instances):
         if max_steps != None and max_steps > 0:
@@ -74,8 +75,8 @@ def run():
 
     c_plot = CustomPlot(enable_plots)
     mc_disc = MountainCarDiscretizer(env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
-    ptl = PTL(mc_disc, n_instances, transfer_hyperparams, gym_environment, get_state_from_obs, c_plot)
-    
+    ptl = PTL(n_instances, transfer_hyperparams)
+
     # if gpu is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -89,7 +90,8 @@ def run():
         target_net[p].eval()
         
         optimizer[p] = optim.Adam(policy_net[p].parameters(), lr=ALPHA, )
-        memory[p] = ReplayMemory(10000)
+        replay_memory[p] = ReplayMemory(10000)
+        transfer_memory[p] = ReplayMemory(200)
 
     def select_action(p, state, steps_done, apply_eps=True):
         sample = random.random()
@@ -106,10 +108,14 @@ def run():
         else:
             return torch.tensor([[random.randrange(n_actions)]], device=device, dtype=torch.long)
 
-    def optimize_model(p, c_plot):
-        if len(memory[p]) < BATCH_SIZE:
+    def optimize_model(p, c_plot, step):
+        transfer_batch_size = round(BATCH_SIZE * ptl.get_theta(step))
+        if len(replay_memory[p]) < BATCH_SIZE - transfer_batch_size:
             return None
-        transitions = memory[p].sample(BATCH_SIZE)
+        transitions = replay_memory[p].sample(BATCH_SIZE - transfer_batch_size)
+        if len(transfer_memory[p]) >= transfer_batch_size:
+            transitions_trans = transfer_memory[p].sample(transfer_batch_size)
+            transitions.extend(transitions_trans)
         batch = Transition(*zip(*transitions))
 
         # Compute a mask of non-final states and concatenate the batch elements
@@ -126,7 +132,7 @@ def run():
         state_action_values = policy_net[p](state_batch.view(-1, obs_length)).gather(1, action_batch)
 
         # Compute V(s_{t+1}) for all next states.
-        next_state_values = torch.zeros(BATCH_SIZE, device=device)
+        next_state_values = torch.zeros(len(transitions), device=device)
         next_state_values[non_final_mask] = target_net[p](non_final_next_states.view(-1, obs_length)).max(1)[0].detach()
 
         # Compute the expected Q values
@@ -184,16 +190,13 @@ def run():
                 next_state = None
 
             # Store the transition in memory
-            memory[p].push(state[p], action, next_state, reward)
-
-            if ptl:
-                ptl.update_state_visits(p, state[p])
+            replay_memory[p].push(state[p], action, next_state, reward)
 
             # Move to the next state
             state[p] = next_state
 
             # Perform one step of the optimization (on the target network)
-            loss[p] = optimize_model(p, c_plot)
+            loss[p] = optimize_model(p, c_plot, i_step)
             if not math.isnan(loss[0]) and p == n_instances - 1:
                 c_plot.push_loss(loss.mean())
                 loss = np.zeros([n_instances])
@@ -215,11 +218,11 @@ def run():
                 target_net[p].load_state_dict(policy_net[p].state_dict())
 
         # Parallel Transfer Learning updates the memories
-        p_transitions = ptl.transfer(policy_net, i_step)
-        for p_trs in p_transitions:
-            (p, transitions) = p_trs
-            for tr in transitions:
-                memory[p].push(tr[0], tr[1], tr[2], tr[3])
+        if i_step % DELAY_PERIOD == 0:
+            p_transitions = ptl.transfer(replay_memory)
+            for p_trs in range(len(p_transitions)):
+                for tr in p_transitions[p_trs]:
+                    transfer_memory[int(not p_trs)].push_t(tr)
 
         if len(np.nonzero(procs_done)[0]) == n_instances:
             break
@@ -249,7 +252,6 @@ def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, cm_reward, n_instan
     if not None in ep_cm_reward_dict[ep_key]:
         removed = np.array(ep_cm_reward_dict[ep_key])
         print('Closing episode', ep_key, 'with cm_rew', removed)
-        print('removed', removed)
         c_plot.push_cm_reward_ep(removed.mean())
         c_plot.push_episode_len(i_step+1)
         ep_cm_reward_dict.pop(ep_key)
@@ -267,4 +269,4 @@ def dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, s
         #env[p].render()
         env[p].close()
         print('Closing env #', p, 'at episode', i_episode[p])
-    c_plot.dispose()   
+    c_plot.dispose()

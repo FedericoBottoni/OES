@@ -6,8 +6,8 @@
         "2": "Right"
     },
     "enable_plots": true,
-    "training_episodes": 5,
-    "max_steps": 10000,
+    "training_episodes": 1100,
+    "max_steps": 2000,
     "stop_condition": {
         "reward_threshold": null,
         "n_episodes": null 
@@ -17,21 +17,21 @@
         "path": "models/experiment.pth"
     },
     "transfer_hyperparams":{
-        "N_PROCESSES" : 3,
-        "STATE_DIM_BINS": 10,
-        "CONFIDENCE" : 10,
+        "N_PROCESSES" : 2,
         "TRANSFER_SIZE" : 5,
-        "THETA_START": 0.9,
-        "THETA_END": 0.4,
-        "THETA_DECAY": 1000
+        "DELAY_PERIOD": 200,
+        "THETA_START": 0.4,
+        "THETA_END": 0.1, 
+        "THETA_DECAY": 10000
     },
     "network_hyperparams": {
-        "BATCH_SIZE": 32,
+        "BATCH_SIZE": 10,
         "ALPHA": 0.001,
         "GAMMA": 0.99,
         "EPS_START": 0.9,
         "EPS_END": 0.02,
         "EPS_DECAY": 3000,
         "TARGET_UPDATE": 10
-    }
+    },
+    "STATE_DIM_BINS": 10
 }

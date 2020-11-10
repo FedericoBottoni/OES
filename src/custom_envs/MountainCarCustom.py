@@ -74,6 +74,9 @@ class MountainCarCustom(gym.Env):
     
     def set_state(self, state):
         self.state = state
+    
+    def get_state(self):
+        return self.state
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)

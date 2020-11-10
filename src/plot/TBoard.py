@@ -15,6 +15,8 @@ class TBoard(object):
         self._n_episode_len = 0
         self._q_value_mean = 0
         self._q_value_var = 0
+        self._sending_data = 0
+        self._receiving_data = 0
 
     def dispose(self):
         self._writer.flush()
@@ -51,13 +53,26 @@ class TBoard(object):
         self.push_scalar("Episode/Episode Length", self._n_episode_len, dataset)
         self._n_episode_len += 1
 
+    def push_sending(self, dataset):
+        self.push_scalar("Transfer/Episode Length", self._n_episode_len, dataset)
+        self._n_episode_len += 1
+        
+
     def push_q_value_mean_dict(self, my_dict):
         self.push_scalars_dict("Reward/Q-Value Mean", self._q_value_mean, my_dict)
         self._q_value_mean += 1
     
     def push_q_value_var_dict(self, my_dict):
-        self.push_scalars_dict("Reward/Q-Value Var", self._q_value_mean, my_dict)
-        self._q_value_mean += 1
+        self.push_scalars_dict("Reward/Q-Value Var", self._q_value_var, my_dict)
+        self._q_value_var += 1
+    
+    def push_sending_dict(self, my_dict):
+        self.push_scalars_dict("Transfer/Sending", self._sending_data, my_dict)
+        self._sending_data += 1
+
+    def push_receiving_dict(self, my_dict):
+        self.push_scalars_dict("Transfer/Receiving", self._receiving_data, my_dict)
+        self._receiving_data += 1
 
     def push_q_values(self, action_dict, state_action_values, action_batch):
         q_values = state_action_values.view(1, -1)[0]

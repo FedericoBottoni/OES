@@ -62,6 +62,7 @@ def run():
     EPS_START = hyperparams['EPS_START']
     BATCH_SIZE = hyperparams['BATCH_SIZE']
     GAMMA = hyperparams['GAMMA']
+    STATE_DIM_BINS = transfer_hyperparams['STATE_DIM_BINS']
     
     for i in range(n_instances):
         if max_steps != None and max_steps > 0:
@@ -72,10 +73,8 @@ def run():
         observation[i] = env[i].reset()
 
     c_plot = CustomPlot(enable_plots)
-    mc_disc = MountainCarDiscretizer(env[0], [3, 3])
-    ptl = None
-    if transfer_hyperparams:
-        ptl = PTL(mc_disc, n_instances, transfer_hyperparams, gym_environment, get_state_from_obs)
+    mc_disc = MountainCarDiscretizer(env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
+    ptl = PTL(mc_disc, n_instances, transfer_hyperparams, gym_environment, get_state_from_obs, c_plot)
     
     # if gpu is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -250,6 +249,7 @@ def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, cm_reward, n_instan
     if not None in ep_cm_reward_dict[ep_key]:
         removed = np.array(ep_cm_reward_dict[ep_key])
         print('Closing episode', ep_key, 'with cm_rew', removed)
+        print('removed', removed)
         c_plot.push_cm_reward_ep(removed.mean())
         c_plot.push_episode_len(i_step+1)
         ep_cm_reward_dict.pop(ep_key)

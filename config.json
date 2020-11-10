@@ -6,7 +6,7 @@
         "2": "Right"
     },
     "enable_plots": true,
-    "training_episodes": 1200,
+    "training_episodes": 5,
     "max_steps": 10000,
     "stop_condition": {
         "reward_threshold": null,
@@ -18,11 +18,12 @@
     },
     "transfer_hyperparams":{
         "N_PROCESSES" : 3,
-        "CONFIDENCE" : 5,
+        "STATE_DIM_BINS": 10,
+        "CONFIDENCE" : 10,
         "TRANSFER_SIZE" : 5,
-        "THETA_START": 0.5,
-        "THETA_END": 0.001,
-        "THETA_DECAY": 4000
+        "THETA_START": 0.9,
+        "THETA_END": 0.4,
+        "THETA_DECAY": 1000
     },
     "network_hyperparams": {
         "BATCH_SIZE": 32,

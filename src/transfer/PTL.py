@@ -8,9 +8,10 @@ import math
 QVal = namedtuple('QVal', ('state', 'action', 'q'))
 
 class PTL():
-    def __init__(self, discretizer, n_instances, transfer_hyperparams, gym_environment, get_state_from_obs):
+    def __init__(self, discretizer, n_instances, transfer_hyperparams, gym_environment, get_state_from_obs, c_plot):
         if n_instances <= 1:
             raise Exception('instance number cannot be less then 2')
+        self._c_plot = c_plot
         self._n_instances = n_instances
         self._discretizer = discretizer
         self._CONFIDENCE = transfer_hyperparams['CONFIDENCE']
@@ -44,6 +45,8 @@ class PTL():
     def compute_theta_decay(self, steps_done):
         self._THETA = self._THETA_END + (self._THETA_START - self._THETA_END) * \
                 math.exp(-1. * steps_done / self._THETA_DECAY)
+        if steps_done % 1000 == 0:
+            print(self._THETA)
 
     def update_state_visits(self, p, state):
         st_index = tuple(self.get_index_from_state(state))
@@ -67,16 +70,26 @@ class PTL():
 
     def transfer(self, policy_nets, step):
         senders = self.select_senders()
+        sender_sizes = {}
+        receiver_sizes = {}
+        for i in range(self._n_instances):
+            sender_sizes[str(i)] = 0
+            receiver_sizes[str(i)] = 0
         out_data = list()
         for sender in senders:
             receivers = self.select_receivers(sender)
-            
             sending_data = self.select_q_subtable(sender, policy_nets[sender])
 
             for receiver in range(len(receivers)):
                 # local_data = self.sample_q_subtable(receiver, policy_nets[receiver], sending_data)
                 # out_data[receiver] = self.merge(sender, sending_data, local_data)
-                out_data.append((receiver, self.parse_out_data(receiver, sending_data)))
+                out, out_len = self.parse_out_data(receiver, sending_data)
+                out_data.append((receiver, out))
+
+                sender_sizes[str(sender)] += out_len
+                receiver_sizes[str(receiver)] += out_len
+        self._c_plot.push_sending_dict(sender_sizes)
+        self._c_plot.push_receiving_dict(receiver_sizes)
         self.compute_theta_decay(step)
         return out_data
     
@@ -124,4 +137,4 @@ class PTL():
             observation, reward, _, _ = self._virtual_env.step(qv.action)
             out.append((qv.state, torch.tensor([[qv.action]]), \
                 torch.from_numpy(self._get_state_from_obs(observation)).float(), torch.tensor([reward])))
-        return out
+        return out, len(out)

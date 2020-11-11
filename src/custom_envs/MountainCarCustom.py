@@ -49,6 +49,7 @@ class MountainCarCustom(gym.Env):
     def __init__(self, goal_velocity=0):
         self.min_position = -1.2
         self.max_position = 0.6
+        self.min_speed = -0.07
         self.max_speed = 0.07
         self.goal_position = 0.5
         self.goal_velocity = goal_velocity

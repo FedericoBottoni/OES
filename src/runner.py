@@ -69,7 +69,7 @@ def run():
         env[i] = gym.make(gym_environment)
         observation[i] = env[i].reset()
 
-    c_plot = CustomPlot(enable_plots)
+    c_plot = CustomPlot(enable_plots, n_instances)
     mc_disc = MountainCarDiscretizer(env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
     ptl = PTL(n_instances, transfer_hyperparams)
 
@@ -197,13 +197,13 @@ def run():
             # Perform one step of the optimization (on the target network)
             loss[p] = optimize_model(p, c_plot, i_step)
             if not math.isnan(loss[0]) and p == n_instances - 1:
-                c_plot.push_loss(loss.mean())
+                c_plot.push_ar_loss(loss)
                 loss = np.zeros([n_instances])
 
             if done:
                 print('Env #', p, 'has solved the episode', i_episode[p])
                 ep_cm_reward_dict, last_cm_rewards = sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, cm_reward, \
-                    n_instances, ep_step[p])
+                    n_instances, ep_step)
                 if last_cm_rewards.size != 0:
                     early_stop, i_earlystop = eval_stop_condition_bound(last_cm_rewards.mean(), i_earlystop)
                 cm_reward[p] = 0
@@ -225,7 +225,7 @@ def run():
         if len(np.nonzero(procs_done)[0]) == n_instances:
             break
 
-        c_plot.push_cm_reward(cm_reward.mean())
+        c_plot.push_ar_cm_reward(cm_reward)
 
         if early_stop:
             early_stopping.on_stop(i_episode.mean())
@@ -250,8 +250,8 @@ def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, cm_reward, n_instan
     if not None in ep_cm_reward_dict[ep_key]:
         removed = np.array(ep_cm_reward_dict[ep_key])
         print('Closing episode', ep_key, 'with cm_rew', removed)
-        c_plot.push_cm_reward_ep(removed.mean())
-        c_plot.push_episode_len(i_step)
+        c_plot.push_ar_cm_reward_ep(removed)
+        c_plot.push_ar_episode_len(i_step)
         ep_cm_reward_dict.pop(ep_key)
     else:
         removed = np.array([])

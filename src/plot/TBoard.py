@@ -1,13 +1,15 @@
-# tensorboard --logdir=runs
+# tensorboard --logdir=out\runs
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
+import numpy as np
 
 class TBoard(object):
 
     # tb_activated = False is a tensorboard mock
-    def __init__(self, tb_activated):
+    def __init__(self, tb_activated, n_instances):
         self._tb_activated = tb_activated
+        self._instances = [str(i) for i in range(n_instances)]
         self._writer = SummaryWriter() if self._tb_activated else None
         self._n_loss = 0
         self._n_cm_reward = 0
@@ -27,7 +29,7 @@ class TBoard(object):
             self._writer.add_scalar(tag, data, n_step)
     
     def push_scalars(self, tag, labels, n_step, datasets):
-        if(self._tb_activated):
+        if self._tb_activated:
             plotset = {}
             for i in range(len(labels)):
                 plotset[labels[i]] = datasets[i]
@@ -37,27 +39,45 @@ class TBoard(object):
         if(self._tb_activated):
             self._writer.add_scalars(tag, plotset, n_step)
     
+
+    # Scalars
     def push_loss(self, dataset):
-        self.push_scalar("Loss/Loss", self._n_loss, dataset)
+        self.push_scalar("Loss/Loss Mn.", self._n_loss, dataset)
         self._n_loss += 1
 
     def push_cm_reward(self, dataset):
-        self.push_scalar("Reward/Cumulative Reward", self._n_cm_reward, dataset)
+        self.push_scalar("Reward/Cumulative Reward Mn.", self._n_cm_reward, dataset)
         self._n_cm_reward += 1
 
     def push_cm_reward_ep(self, dataset):
-        self.push_scalar("Reward/Cumulative Reward Ep.", self._n_cm_reward_ep, dataset)
+        self.push_scalar("Reward/Cumulative Reward Ep. Mn.", self._n_cm_reward_ep, dataset)
         self._n_cm_reward_ep += 1
 
     def push_episode_len(self, dataset):
-        self.push_scalar("Episode/Episode Length", self._n_episode_len, dataset)
+        self.push_scalar("Episode/Episode Length Mn.", self._n_episode_len, dataset)
         self._n_episode_len += 1
 
-    def push_sending(self, dataset):
-        self.push_scalar("Transfer/Episode Length", self._n_episode_len, dataset)
-        self._n_episode_len += 1
-        
 
+    # Arrays
+    def push_ar_loss(self, dataset):
+        self.push_scalars("Loss/Loss", self._instances, self._n_loss, dataset)
+        self.push_loss(dataset.mean())
+
+    def push_ar_cm_reward(self, dataset):
+        self.push_scalars("Reward/Cumulative Reward", self._instances, self._n_cm_reward, dataset)
+        self.push_cm_reward(dataset.mean())
+
+    def push_ar_cm_reward_ep(self, dataset):
+        self.push_scalars("Reward/Cumulative Reward Ep.", self._instances, self._n_cm_reward_ep, dataset)
+        self.push_cm_reward_ep(dataset.mean())
+
+    def push_ar_episode_len(self, dataset):
+        self.push_scalars("Episode/Episode Length", self._instances, self._n_episode_len, dataset)
+        self.push_episode_len(dataset.mean())
+
+
+
+    # Multi charts
     def push_q_value_mean_dict(self, my_dict):
         self.push_scalars_dict("Reward/Q-Value Mean", self._q_value_mean, my_dict)
         self._q_value_mean += 1

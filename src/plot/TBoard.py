@@ -19,8 +19,9 @@ class TBoard(object):
         self._receiving_data = 0
 
     def dispose(self):
-        self._writer.flush()
-        self._writer.close()
+        if self._tb_activated:
+            self._writer.flush()
+            self._writer.close()
 
     def push_scalar(self, tag, n_step, data):
         if(self._tb_activated):

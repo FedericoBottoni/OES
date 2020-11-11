@@ -23,3 +23,9 @@ class PTL():
     def get_theta(self, steps_done):
         return self._THETA_END + (self._THETA_START - self._THETA_END) * \
                 math.exp(-1. * steps_done / self._THETA_DECAY)
+    
+    def get_receiver(self, sender):
+        if sender % 2 == 0:
+            return sender + 1
+        else:
+            return sender - 1

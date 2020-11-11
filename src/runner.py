@@ -66,11 +66,7 @@ def run():
     DELAY_PERIOD = transfer_hyperparams['DELAY_PERIOD']
     
     for i in range(n_instances):
-        if max_steps != None and max_steps > 0:
-            env[i] = gym.make(gym_environment)
-            env[i]._max_episode_steps = max_steps
-        else:
-            env[i] = gym.make(gym_environment).unwrapped
+        env[i] = gym.make(gym_environment)
         observation[i] = env[i].reset()
 
     c_plot = CustomPlot(enable_plots)
@@ -163,7 +159,6 @@ def run():
     ep_step = np.zeros([n_instances], dtype=np.int16)
     loss = np.zeros([n_instances])
     ep_cm_reward_dict = {}
-    last_ep_i_step = 0
     procs_done = np.zeros([n_instances])
     
     atexit.register(dispose, c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
@@ -171,7 +166,8 @@ def run():
         for p in range(n_instances):
             if i_episode[p] == num_episodes:
                 procs_done[p] = 1
-                pass
+            if procs_done[p] == 1:
+                continue
             
             if ep_step[p] == 0:
                 observation[p] = env[p].reset()
@@ -183,6 +179,9 @@ def run():
 
             reward = torch.tensor([reward], device=device)
             cm_reward[p] += reward
+
+            if ep_step[p] >= max_steps:
+                done = True
 
             if not done:
                 next_state = torch.from_numpy(observation[p]).float()
@@ -204,10 +203,9 @@ def run():
             if done:
                 print('Env #', p, 'has solved the episode', i_episode[p])
                 ep_cm_reward_dict, last_cm_rewards = sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, cm_reward, \
-                    n_instances, i_step - last_ep_i_step)
+                    n_instances, ep_step[p])
                 if last_cm_rewards.size != 0:
                     early_stop, i_earlystop = eval_stop_condition_bound(last_cm_rewards.mean(), i_earlystop)
-                last_ep_i_step = i_step
                 cm_reward[p] = 0
                 ep_step[p] = 0
                 i_episode[p] += 1
@@ -222,7 +220,7 @@ def run():
             p_transitions = ptl.transfer(replay_memory)
             for p_trs in range(len(p_transitions)):
                 for tr in p_transitions[p_trs]:
-                    transfer_memory[int(not p_trs)].push_t(tr)
+                    transfer_memory[ptl.get_receiver(p_trs)].push_t(tr)
 
         if len(np.nonzero(procs_done)[0]) == n_instances:
             break
@@ -253,7 +251,7 @@ def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, cm_reward, n_instan
         removed = np.array(ep_cm_reward_dict[ep_key])
         print('Closing episode', ep_key, 'with cm_rew', removed)
         c_plot.push_cm_reward_ep(removed.mean())
-        c_plot.push_episode_len(i_step+1)
+        c_plot.push_episode_len(i_step)
         ep_cm_reward_dict.pop(ep_key)
     else:
         removed = np.array([])

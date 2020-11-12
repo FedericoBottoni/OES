@@ -35,6 +35,7 @@ def run():
         max_steps = config['max_steps']
         stop_condition = [config['stop_condition']['reward_threshold'], config['stop_condition']['n_episodes']]
         save_model = config['save_model']['active']
+        enable_transfer = config['enable_transfer']
         transfer_hyperparams = config['transfer_hyperparams']
         hyperparams = config['network_hyperparams']
         if save_model:
@@ -42,9 +43,8 @@ def run():
 
     eval_stop_condition_bound = partial(early_stopping.eval_stop_condition, stop_condition)
 
-    n_instances = 1
-    if transfer_hyperparams != None:
-        n_instances = transfer_hyperparams['N_PROCESSES']
+    n_instances = transfer_hyperparams['N_PROCESSES']
+    TRANSFER_DELAY = transfer_hyperparams['TRANSFER_DELAY']
 
     env = [None] * n_instances
     observation = [None] * n_instances
@@ -63,7 +63,7 @@ def run():
     GAMMA = hyperparams['GAMMA']
     STATE_DIM_BINS = config['STATE_DIM_BINS']
 
-    DELAY_PERIOD = transfer_hyperparams['DELAY_PERIOD']
+    TRANSFER_INTERVAL = transfer_hyperparams['TRANSFER_INTERVAL']
     
     for i in range(n_instances):
         env[i] = gym.make(gym_environment)
@@ -71,7 +71,7 @@ def run():
 
     c_plot = CustomPlot(enable_plots, n_instances)
     mc_disc = MountainCarDiscretizer(env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
-    ptl = PTL(n_instances, transfer_hyperparams)
+    ptl = PTL(enable_transfer, n_instances, transfer_hyperparams)
 
     # if gpu is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -216,11 +216,13 @@ def run():
                 target_net[p].load_state_dict(policy_net[p].state_dict())
 
         # Parallel Transfer Learning updates the memories
-        if i_step % DELAY_PERIOD == 0:
+        if enable_transfer and i_step >= TRANSFER_DELAY and i_step % TRANSFER_INTERVAL == 0:
             p_transitions = ptl.transfer(replay_memory)
-            for p_trs in range(len(p_transitions)):
+            for p_trs in np.arange(0, n_instances, 2):
                 for tr in p_transitions[p_trs]:
                     transfer_memory[ptl.get_receiver(p_trs)].push_t(tr)
+        if enable_transfer and i_step % 10000 == 0:
+            print('step', i_step, 'theta', ptl.get_theta(i_step))
 
         if len(np.nonzero(procs_done)[0]) == n_instances:
             break

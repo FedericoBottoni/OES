@@ -16,21 +16,23 @@
         "active": true,
         "path": "out/models/experiment.pth"
     },
+    "enable_transfer": false,
     "transfer_hyperparams":{
         "N_PROCESSES" : 6,
-        "TRANSFER_SIZE" : 5,
-        "DELAY_PERIOD": 200,
+        "TRANSFER_SIZE": 50,
+        "TRANSFER_DELAY" : 10000,
+        "TRANSFER_INTERVAL": 200,
+        "THETA_DECAY": 10000,
         "THETA_START": 0.4,
-        "THETA_END": 0.1, 
-        "THETA_DECAY": 10000
+        "THETA_END": 0.1 
     },
     "network_hyperparams": {
         "BATCH_SIZE": 32,
         "ALPHA": 0.001,
         "GAMMA": 0.99,
         "EPS_START": 0.9,
-        "EPS_END": 0.02,
-        "EPS_DECAY": 3000,
+        "EPS_END": 0.01,
+        "EPS_DECAY": 6000,
         "TARGET_UPDATE": 10
     },
     "STATE_DIM_BINS": 15

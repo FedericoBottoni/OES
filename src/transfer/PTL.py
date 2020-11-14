@@ -16,8 +16,8 @@ class PTL():
         self._discretizer = discretizer
         self._CONFIDENCE = transfer_hyperparams['CONFIDENCE']
         self._TRANSFER_SIZE = transfer_hyperparams['TRANSFER_SIZE']
-        self._THETA_START = transfer_hyperparams['THETA_START']
-        self._THETA_END = transfer_hyperparams['THETA_END']
+        self._THETA_MAX = transfer_hyperparams['THETA_MAX']
+        self._THETA_MIN = transfer_hyperparams['THETA_MIN']
         self._THETA_DECAY = transfer_hyperparams['THETA_DECAY']
         self.elegibility = [False] * n_instances
         self._state_visits = [None] * n_instances
@@ -43,7 +43,7 @@ class PTL():
         return random.random() <= self._THETA
 
     def compute_theta_decay(self, steps_done):
-        self._THETA = self._THETA_END + (self._THETA_START - self._THETA_END) * \
+        self._THETA = self._THETA_MIN + (self._THETA_MAX - self._THETA_MIN) * \
                 math.exp(-1. * steps_done / self._THETA_DECAY)
         if steps_done % 1000 == 0:
             print(self._THETA)

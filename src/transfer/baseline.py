@@ -7,10 +7,10 @@ class PTL():
             raise Exception('instance number cannot be less then 2')
         self._n_instances = n_instances
         self._enable_transfer = enable_transfer
-        self._TRANSFER_DELAY = transfer_hyperparams['TRANSFER_DELAY']
+        self._TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
         self._TRANSFER_SIZE = transfer_hyperparams['TRANSFER_SIZE']
-        self._THETA_START = transfer_hyperparams['THETA_START']
-        self._THETA_END = transfer_hyperparams['THETA_END']
+        self._THETA_MAX = transfer_hyperparams['THETA_MAX']
+        self._THETA_MIN = transfer_hyperparams['THETA_MIN']
         self._THETA_DECAY = transfer_hyperparams['THETA_DECAY']
 
     def transfer(self, replay_memory):
@@ -24,8 +24,8 @@ class PTL():
 
     def get_theta(self, steps_done):
         if self._enable_transfer:
-            return self._THETA_END + (self._THETA_START - self._THETA_END) * \
-                math.exp(-1. * (steps_done - self._TRANSFER_DELAY) / self._THETA_DECAY)
+            return self._THETA_MIN + (self._THETA_MAX - self._THETA_MIN) * \
+                math.exp(-1. * (steps_done - self._TRANSFER_APEX) / self._THETA_DECAY)
         else:
             return 0
     

@@ -5,7 +5,7 @@
         "1": "Nothing",
         "2": "Right"
     },
-    "enable_plots": true,
+    "enable_plots": false,
     "training_episodes": 1000,
     "max_steps": 2000,
     "stop_condition": {
@@ -16,15 +16,15 @@
         "active": true,
         "path": "out/models/experiment.pth"
     },
-    "enable_transfer": false,
+    "enable_transfer": true,
     "transfer_hyperparams":{
         "N_PROCESSES" : 6,
         "TRANSFER_SIZE": 50,
-        "TRANSFER_DELAY" : 10000,
         "TRANSFER_INTERVAL": 200,
-        "THETA_DECAY": 10000,
-        "THETA_START": 0.4,
-        "THETA_END": 0.1 
+        "TRANSFER_APEX" : 50,
+        "THETA_DECAY": 250,
+        "THETA_MAX": 0.4,
+        "THETA_MIN": 0.1 
     },
     "network_hyperparams": {
         "BATCH_SIZE": 32,

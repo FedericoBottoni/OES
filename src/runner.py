@@ -18,7 +18,7 @@ from src.plot.CustomPlot import CustomPlot
 from src.ReplayMemory import ReplayMemory
 from src.DQN import DQN
 from src.preprocessing.MountainCarDiscretizer import MountainCarDiscretizer
-from src.transfer.baseline import PTL
+from src.transfer.doublefilter import PTL
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 

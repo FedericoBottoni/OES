@@ -28,9 +28,21 @@ class PTL():
                 math.exp(-1. * (steps_done - self._TRANSFER_APEX) / self._THETA_DECAY)
         else:
             return 0
+
+    def get_senders(self):
+        return [n for n in range(self._n_instances) if n%2==0]
+    
+    def get_receivers(self):
+        return [n for n in range(self._n_instances) if n%2==1] 
+            
+    def get_sender(self, receiver):
+        if receiver % 2 == 0:
+            return None
+        else:
+            return receiver - 1
     
     def get_receiver(self, sender):
         if sender % 2 == 0:
             return sender + 1
         else:
-            return sender - 1
+            return None

@@ -11,8 +11,8 @@ markers = ['o', 'v', 'd']
 
 class CustomPlot(TBoard):
 
-    def __init__(self, tb_activated, n_instances, plot_offset=10):
-        super().__init__(tb_activated, n_instances)
+    def __init__(self, tb_activated, ptl, n_instances, plot_offset=10):
+        super().__init__(tb_activated, ptl, n_instances)
         # if tb_activated:
         is_ipython = 'inline' in matplotlib.get_backend()
         if is_ipython:

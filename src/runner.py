@@ -44,7 +44,7 @@ def run():
     eval_stop_condition_bound = partial(early_stopping.eval_stop_condition, stop_condition)
 
     n_instances = transfer_hyperparams['N_PROCESSES']
-    TRANSFER_DELAY = transfer_hyperparams['TRANSFER_DELAY']
+    TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
 
     env = [None] * n_instances
     observation = [None] * n_instances
@@ -216,13 +216,11 @@ def run():
                 target_net[p].load_state_dict(policy_net[p].state_dict())
 
         # Parallel Transfer Learning updates the memories
-        if enable_transfer and i_step >= TRANSFER_DELAY and i_step % TRANSFER_INTERVAL == 0:
+        if enable_transfer and i_step >= TRANSFER_APEX and i_step % TRANSFER_INTERVAL == 0:
             p_transitions = ptl.transfer(replay_memory)
             for p_trs in np.arange(0, n_instances, 2):
                 for tr in p_transitions[p_trs]:
                     transfer_memory[ptl.get_receiver(p_trs)].push_t(tr)
-        if enable_transfer and i_step % 10000 == 0:
-            print('step', i_step, 'theta', ptl.get_theta(i_step))
 
         if len(np.nonzero(procs_done)[0]) == n_instances:
             break

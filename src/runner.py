@@ -18,7 +18,7 @@ from src.plot.CustomPlot import CustomPlot
 from src.ReplayMemory import ReplayMemory
 from src.DQN import DQN
 from src.preprocessing.MountainCarDiscretizer import MountainCarDiscretizer
-from src.transfer.doublefilter import PTL
+from src.transfer.visits_filters import PTL
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
@@ -64,20 +64,21 @@ def run():
     STATE_DIM_BINS = config['STATE_DIM_BINS']
 
     TRANSFER_INTERVAL = transfer_hyperparams['TRANSFER_INTERVAL']
+    TRANSFER_DISC = transfer_hyperparams['TRANSFER_DISC']
     
     for i in range(n_instances):
         env[i] = gym.make(gym_environment)
         observation[i] = env[i].reset()
 
-    ptl = PTL(enable_transfer, n_instances, transfer_hyperparams)
+    ptl = PTL(enable_transfer, n_instances, gym_environment, \
+        MountainCarDiscretizer(env[0], [TRANSFER_DISC] * len(env[0].get_state())), transfer_hyperparams)
     c_plot = CustomPlot(enable_plots, ptl, n_instances)
-    mc_disc = MountainCarDiscretizer(env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
-
-    # if gpu is to be used
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     obs_length = observation[0].shape[0]
     n_actions = env[0].action_space.n
+
+    # if gpu is to be used
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     for p in range(n_instances):
         policy_net[p] = DQN(obs_length, n_actions).to(device)
@@ -87,7 +88,7 @@ def run():
         
         optimizer[p] = optim.Adam(policy_net[p].parameters(), lr=ALPHA, )
         replay_memory[p] = ReplayMemory(10000)
-        transfer_memory[p] = ReplayMemory(200)
+        transfer_memory[p] = ReplayMemory(32)
 
     def select_action(p, state, steps_done, apply_eps=True):
         sample = random.random()
@@ -113,7 +114,6 @@ def run():
             transitions_trans = transfer_memory[p].sample(transfer_batch_size)
             transitions.extend(transitions_trans)
         batch = Transition(*zip(*transitions))
-
         # Compute a mask of non-final states and concatenate the batch elements
         # (a final state would've been the one after which simulation ended)
         non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
@@ -218,7 +218,7 @@ def run():
 
         # Parallel Transfer Learning updates the memories
         if enable_transfer and i_step >= TRANSFER_APEX and i_step % TRANSFER_INTERVAL == 0:
-            p_transitions = ptl.transfer(replay_memory)
+            p_transitions = ptl.transfer(replay_memory, policy_net)
             for p_trs in np.arange(0, n_instances, 2):
                 for tr in p_transitions[p_trs]:
                     transfer_memory[ptl.get_receiver(p_trs)].push_t(tr)
@@ -236,6 +236,7 @@ def run():
     print('Time elapsed', int(end - start), 's')
     best_env = 0
     select_action_bound = lambda st : select_action(best_env, st, 0, apply_eps=False).item()
+    mc_disc = MountainCarDiscretizer(env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
     c_plot.plot_state_actions(mc_disc, select_action_bound, policy_net[best_env], action_dict_tags)
     
     dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)

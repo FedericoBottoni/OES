@@ -164,10 +164,10 @@ def run():
     atexit.register(dispose, c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
     for i_step in count():
         for p in range(n_instances):
-            if i_episode[p] == num_episodes:
-                procs_done[p] = 1
             if procs_done[p] == 1:
                 continue
+            if i_episode[p] == num_episodes:
+                procs_done[p] = 1
             
             if ep_step[p] == 0:
                 observation[p] = env[p].reset()
@@ -198,7 +198,7 @@ def run():
             loss[p] = optimize_model(p, c_plot, i_step)
 
             if done:
-                print('Env #', p, 'has solved the episode', i_episode[p])
+                print('Env#', p, 'has solved ep#', i_episode[p])
                 ep_cm_reward_dict, last_cm_rewards = sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, \
                      cm_reward, n_instances, ep_step)
                 if last_cm_rewards.size != 0:
@@ -223,10 +223,10 @@ def run():
                 for tr in p_transitions[p_trs]:
                     transfer_memory[ptl.get_receiver(p_trs)].push_t(tr)
 
+        c_plot.push_ar_cm_reward(procs_done, cm_reward)
+
         if len(np.nonzero(procs_done)[0]) == n_instances:
             break
-
-        c_plot.push_ar_cm_reward(procs_done, cm_reward)
 
         if early_stop:
             early_stopping.on_stop(i_episode.mean())

@@ -71,32 +71,30 @@ class PTL():
             if len(replay_memory[p]) < self._TRANSFER_SIZE:
                     transitions.append([])
             else:
-                # transitions.append(replay_memory[p].memory[-self._TRANSFER_SIZE:]) # BL
-                transitions.append(self.provide_transitions(p, policy_net[p])) # EXP1
+                transitions.append(replay_memory[p].memory[-self._TRANSFER_SIZE:]) # BL
+                # transitions.append(self.provide_transitions(p, policy_net[p])) # EXP1
         return transitions
 
 
     # "gather" transfer
-    def gather_transitions(self, p, transfer_buffer, size):
-        #print(self._state_visits[p])
+    def gather_transitions(self, p, transfer_memory, size):
+        transfer_buffer = transfer_memory.memory
         len_transfer_buffer = len(transfer_buffer)
         visits = [None] * len_transfer_buffer
         for i in range(len_transfer_buffer):
-            states_index = self._discretizer.disc_index(transfer_buffer.memory[i].state)
+            states_index = self._discretizer.disc_index(transfer_buffer[i].state)
             visits[i] = self._state_visits[p][tuple(states_index)]
-            #print(states_index, visits[i])
         tr_indexes = self.gather_transitions_visits_bottom(torch.tensor(visits), size)
         transitions = [transfer_buffer[i] for i in tr_indexes]
         return transitions
 
     def gather_transitions_visits_bottom(self, buffer, k):
-        #print(buffer, k)
         _, indxs_flt = torch.topk(buffer, k, largest=False)
         return indxs_flt
 
     def gather_transfer(self, p, transfer_memory, size):
-        transitions = transfer_memory.sample(size) # BL
-        # transitions = self.gather_transitions(p, transfer_buffer, size) # EXP2
+        # transitions = transfer_memory.sample(size) # BL
+        transitions = self.gather_transitions(p, transfer_memory, size) # EXP2
         return transitions
 
 

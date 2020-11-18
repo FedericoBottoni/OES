@@ -191,7 +191,8 @@ def run():
             # Store the transition in memory
             replay_memory[p].push(state[p], action, next_state, reward)
 
-            ptl.update_state_visits(p, state[p])
+            if enable_transfer:
+                ptl.update_state_visits(p, state[p])
 
             # Move to the next state
             state[p] = next_state

@@ -111,7 +111,7 @@ def run():
             return None
         transitions = replay_memory[p].sample(BATCH_SIZE - transfer_batch_size)
         if len(transfer_memory[p]) >= transfer_batch_size:
-            transitions_trans = transfer_memory[p].sample(transfer_batch_size)
+            transitions_trans = ptl.gather_transfer(p, transfer_memory[p].memory, transfer_batch_size)
             transitions.extend(transitions_trans)
         batch = Transition(*zip(*transitions))
         # Compute a mask of non-final states and concatenate the batch elements
@@ -218,10 +218,10 @@ def run():
 
         # Parallel Transfer Learning updates the memories
         if enable_transfer and i_step >= TRANSFER_APEX and i_step % TRANSFER_INTERVAL == 0:
-            p_transitions = ptl.transfer(replay_memory, policy_net)
-            for p_trs in np.arange(0, n_instances, 2):
-                for tr in p_transitions[p_trs]:
-                    transfer_memory[ptl.get_receiver(p_trs)].push_t(tr)
+            p_transitions = ptl.provide_transfer(replay_memory, policy_net)
+            for p_sender in ptl.get_senders():
+                for tr in p_transitions[p_sender]:
+                    transfer_memory[ptl.get_receiver(p_sender)].push_t(tr)
 
         c_plot.push_ar_cm_reward(procs_done, cm_reward)
 

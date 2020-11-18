@@ -42,8 +42,10 @@ class PTL():
         st_index = tuple(self.get_index_from_state(state))
         self._state_visits[p][st_index] += 1
 
-    def select_transitions(self, p, policy_net):
-        selected_states_i = self.select_transitions_visits(p)
+
+    # "provide" transfer
+    def provide_transitions(self, p, policy_net):
+        selected_states_i = self.provide_transitions_visits_top(p)
         selected_states = torch.tensor(list(map(self.get_state_from_index, selected_states_i)))
         values = policy_net(selected_states)
         actions = values.max(1)[1]
@@ -56,22 +58,49 @@ class PTL():
                     torch.from_numpy(observation).float(), torch.tensor([reward])))
         return sending_knowledge
 
-    def select_transitions_visits(self, p):
+    def provide_transitions_visits_top(self, p):
         n_states = self._TRANSFER_DISC ** len(self._states)
         k = min(n_states, self._TRANSFER_SIZE)
         _, indxs_flt = torch.topk(self._state_visits[p].flatten(), k)
         indxs = np.array(np.unravel_index(indxs_flt.numpy(), self._state_visits[p].shape)).T
         return indxs
 
-    def transfer(self, replay_memory, policy_net):
+    def provide_transfer(self, replay_memory, policy_net):
         transitions = list()
         for p in range(self._n_instances):
             if len(replay_memory[p]) < self._TRANSFER_SIZE:
                     transitions.append([])
             else:
-                transitions.append(self.select_transitions(p, policy_net[p]))
+                transitions.append(replay_memory[p].memory[-self._TRANSFER_SIZE:]) # BL
+                #transitions.append(self.provide_transitions(p, policy_net[p])) # EXP1
         return transitions
 
+
+    # "gather" transfer
+    def gather_transitions(self, p, transfer_buffer, size):
+        #print(self._state_visits[p])
+        len_transfer_buffer = len(transfer_buffer)
+        visits = [None] * len_transfer_buffer
+        for i in range(len_transfer_buffer):
+            states_index = self._discretizer.disc_index(transfer_buffer[i].state)
+            visits[i] = self._state_visits[p][tuple(states_index)]
+            #print(states_index, visits[i])
+        tr_indexes = self.gather_transitions_visits_bottom(torch.tensor(visits), size)
+        transitions = [transfer_buffer[i] for i in tr_indexes]
+        return transitions
+
+    def gather_transitions_visits_bottom(self, buffer, k):
+        #print(buffer, k)
+        _, indxs_flt = torch.topk(buffer, k, largest=False)
+        return indxs_flt
+
+    def gather_transfer(self, p, transfer_buffer, size):
+        transitions = self.gather_transitions(p, transfer_buffer, size) # EXP2
+        # transitions = transfer_memory[p].sample(transfer_batch_size) # BL
+        return transitions
+
+
+    # Parameter functions
     def get_theta(self, episode):
         if self._enable_transfer:
             if episode <= self._TRANSFER_APEX:

@@ -111,7 +111,7 @@ def run():
             return None
         transitions = replay_memory[p].sample(BATCH_SIZE - transfer_batch_size)
         if len(transfer_memory[p]) >= transfer_batch_size:
-            transitions_trans = ptl.gather_transfer(p, transfer_memory[p].memory, transfer_batch_size)
+            transitions_trans = ptl.gather_transfer(p, transfer_memory[p], transfer_batch_size)
             transitions.extend(transitions_trans)
         batch = Transition(*zip(*transitions))
         # Compute a mask of non-final states and concatenate the batch elements
@@ -190,6 +190,8 @@ def run():
 
             # Store the transition in memory
             replay_memory[p].push(state[p], action, next_state, reward)
+
+            ptl.update_state_visits(p, state[p])
 
             # Move to the next state
             state[p] = next_state

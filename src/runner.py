@@ -214,6 +214,8 @@ def run():
 
             if i_episode[p] % hyperparams['TARGET_UPDATE'] == 0:
                 target_net[p].load_state_dict(policy_net[p].state_dict())
+        
+        c_plot.add_step()
 
         if not math.isnan(loss[0]):
             c_plot.push_ar_loss(procs_done, loss)
@@ -257,12 +259,12 @@ def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, cm_rewa
         cm_rws = [i[0] for i in removed]
         lens = [i[1] for i in removed]
         print('Closing episode', ep_key, 'with cm_rew', cm_rws)
-        c_plot.push_ar_cm_reward_ep(procs_done, cm_rws)
-        c_plot.push_ar_episode_len(procs_done, lens)
+        c_plot.push_ar_cm_reward_ep(cm_rws)
+        c_plot.push_ar_episode_len(lens)
+        c_plot.add_episode()
         ep_cm_reward_dict.pop(ep_key)
     else:
         removed = np.array([])
-        
     return ep_cm_reward_dict, removed
 
 def dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode):

@@ -71,7 +71,7 @@ class TBoard(object):
         filt_datset = [dataset[i] for i in range(len(dataset)) if dones[i] == 0]
         self.push_scalars("Loss/Loss", filt_labels, self._n_step, filt_datset)
         if not self._ptl._enable_transfer:
-            self.push_scalar("Loss/Loss Mn.", self._n_step, dataset.mean())
+            self.push_scalar("Loss/Loss Mn.", self._n_step, torch.tensor(dataset).mean())
         else:
             g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], dataset, procs_done=dones)
             self.push_scalars("Loss/Loss Mn", labels, self._n_step, g_dataset)
@@ -81,7 +81,7 @@ class TBoard(object):
         filt_datset = [dataset[i] for i in range(len(dataset)) if dones[i] == 0]
         self.push_scalars("Reward/Cumulative Reward", filt_labels, self._n_step, filt_datset)
         if not self._ptl._enable_transfer:
-            self.push_scalar("Reward/Cumulative Reward Mn.", self._n_step, dataset.mean())
+            self.push_scalar("Reward/Cumulative Reward Mn.", self._n_step, torch.tensor(dataset).mean())
         else:
             g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], dataset, procs_done=dones)
             self.push_scalars("Reward/Cumulative Reward Mn", labels, self._n_step, g_dataset)
@@ -89,7 +89,7 @@ class TBoard(object):
     def push_ar_cm_reward_ep(self, dataset):
         self.push_scalars("Reward/Cumulative Reward Ep.", self._instances, self._n_episode, dataset)
         if not self._ptl._enable_transfer:
-            self.push_scalar("Reward/Cumulative Reward Ep. Mn.", self._n_episode, dataset.mean())
+            self.push_scalar("Reward/Cumulative Reward Ep. Mn.", self._n_episode, torch.tensor(dataset).mean())
         else:
             g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], dataset)
             self.push_scalars("Reward/Cumulative Reward Ep. Mn", labels, self._n_episode, g_dataset)
@@ -97,7 +97,7 @@ class TBoard(object):
     def push_ar_episode_len(self, dataset):
         self.push_scalars("Episode/Episode Length", self._instances, self._n_episode, dataset)
         if not self._ptl._enable_transfer:
-            self.push_scalar("Episode/Episode Length Mn.", self._n_episode, dataset.mean())
+            self.push_scalar("Episode/Episode Length Mn.", self._n_episode, torch.tensor(dataset).mean())
         else:
             g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], dataset)
             self.push_scalars("Episode/Episode Length Mn", labels, self._n_episode, g_dataset)

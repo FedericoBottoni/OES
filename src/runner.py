@@ -105,8 +105,8 @@ def run():
         else:
             return torch.tensor([[random.randrange(n_actions)]], device=device, dtype=torch.long)
 
-    def optimize_model(p, c_plot, step):
-        transfer_batch_size = round(BATCH_SIZE * ptl.get_theta(step))
+    def optimize_model(p, c_plot, episode):
+        transfer_batch_size = round(BATCH_SIZE * ptl.get_theta(episode[p]))
         if len(replay_memory[p]) < BATCH_SIZE - transfer_batch_size:
             return None
         transitions = replay_memory[p].sample(BATCH_SIZE - transfer_batch_size)
@@ -197,7 +197,7 @@ def run():
             state[p] = next_state
 
             # Perform one step of the optimization (on the target network)
-            loss[p] = optimize_model(p, c_plot, i_step)
+            loss[p] = optimize_model(p, c_plot, i_episode)
 
             if done:
                 print('Env#', p, 'has solved ep#', i_episode[p])

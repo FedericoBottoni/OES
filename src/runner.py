@@ -64,6 +64,9 @@ def run():
     STATE_DIM_BINS = config['STATE_DIM_BINS']
 
     TRANSFER_INTERVAL = transfer_hyperparams['TRANSFER_INTERVAL']
+    TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
+    THETA_MAX = transfer_hyperparams['THETA_MAX']
+    THETA_MIN = transfer_hyperparams['THETA_MIN']
     
     for i in range(n_instances):
         env[i] = gym.make(gym_environment)
@@ -71,7 +74,12 @@ def run():
 
     ptl = PTL(enable_transfer, n_instances, transfer_hyperparams)
     c_plot = CustomPlot(enable_plots, ptl, n_instances)
-    mc_disc = MountainCarDiscretizer(env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
+    #mc_disc = MountainCarDiscretizer(env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
+
+    print('Running', n_instances, 'processes')
+    if(enable_transfer):
+        print('Transfer enabled, THETA between', THETA_MIN, '-', THETA_MAX, 'with APEX on ep.', TRANSFER_APEX, \
+            'every', TRANSFER_INTERVAL, 'steps')
 
     # if gpu is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -230,15 +238,11 @@ def run():
         if len(np.nonzero(procs_done)[0]) == n_instances:
             break
 
-        if early_stop:
-            early_stopping.on_stop(i_episode.mean())
-            break
-
     end = time.time()
     print('Time elapsed', int(end - start), 's')
-    best_env = 0
-    select_action_bound = lambda st : select_action(best_env, st, 0, apply_eps=False).item()
-    c_plot.plot_state_actions(mc_disc, select_action_bound, policy_net[best_env], action_dict_tags)
+    #best_env = 0
+    #select_action_bound = lambda st : select_action(best_env, st, 0, apply_eps=False).item()
+    #c_plot.plot_state_actions(mc_disc, select_action_bound, policy_net[best_env], action_dict_tags)
     
     dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
 
@@ -265,11 +269,10 @@ def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, cm_rewa
 
 def dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode):
     if save_model:
-        env_saved = np.argmax(i_episode)
-        torch.save(policy_net[env_saved].state_dict(), save_model_path)
-        print('Model #', env_saved, 'saved in:', save_model_path)
-    for p in range(n_instances):
-        #env[p].render()
-        env[p].close()
-        print('Closing env #', p, 'at episode', i_episode[p])
+        for p in range(n_instances):
+            path = save_model_path + str(p) + '.pth'
+            torch.save(policy_net[p].state_dict(), path)
+            print('Model #', p, 'saved in:', path)
+            env[p].close()
+            print('Closing env #', p, 'at episode', i_episode[p])
     c_plot.dispose()

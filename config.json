@@ -1,22 +1,21 @@
 {
-    "gym_environment": "MountainCarCustom-v0",
+    "gym_environment": "CartPoleCustom-v0",
     "action_names": {
         "0": "Left",
-        "1": "Nothing",
-        "2": "Right"
+        "1": "Right"
     },
     "enable_plots": true,
-    "training_episodes": 100,
-    "max_steps": 2000,
+    "training_episodes": 200,
+    "max_steps": 500,
     "stop_condition": {
-        "reward_threshold": null,
-        "n_episodes": null 
+        "reward_threshold": 195,
+        "n_episodes": 100 
     },
     "save_model": {
         "active": true,
-        "path": "out/models/experiment.pth"
+        "path": "out/models/experiment"
     },
-    "enable_transfer": true,
+    "enable_transfer": false,
     "transfer_hyperparams":{
         "N_PROCESSES" : 6,
         "TRANSFER_SIZE": 50,
@@ -27,12 +26,12 @@
         "THETA_MIN": 0.1 
     },
     "network_hyperparams": {
-        "BATCH_SIZE": 32,
+        "BATCH_SIZE": 64,
         "ALPHA": 0.001,
-        "GAMMA": 0.99,
+        "GAMMA": 0.9999,
         "EPS_START": 0.9,
         "EPS_END": 0.01,
-        "EPS_DECAY": 6000,
+        "EPS_DECAY": 2000,
         "TARGET_UPDATE": 10
     },
     "STATE_DIM_BINS": 15

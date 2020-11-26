@@ -79,6 +79,13 @@ class MountainCarCustom(gym.Env):
     def get_state(self):
         return self.state
 
+    def get_action_labels(self):
+        return {
+        "0": "Left",
+        "1": "Nothing",
+        "2": "Right"
+    }
+
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]

@@ -112,7 +112,6 @@ class TBoard(object):
 
     def push_ar_episode_len(self, dataset):
         filt_labels, filt_dataset, dones = self.get_sync_undone_data(dataset)
-        print(filt_labels, filt_dataset, dones)
         self.push_scalars("Episode/Episode Length", filt_labels, self._n_episode, filt_dataset)
         if not self._ptl._enable_transfer:
             self.push_scalar("Episode/Episode Length Mn.", self._n_episode, torch.tensor(filt_dataset, dtype=torch.float).mean())

@@ -28,8 +28,6 @@ def run():
         config = json.load(json_file)
         enable_plots = config['enable_plots']
         gym_environment = config['gym_environment']
-        action_dict = config['action_names']
-        action_dict_tags = np.array(list(action_dict.items()))[:, 1]
         num_episodes = config['training_episodes']
         max_steps = config['max_steps']
         ES_REWARD = config['stop_condition']['reward_threshold']
@@ -73,7 +71,7 @@ def run():
     ptl = PTL(enable_transfer, n_instances, transfer_hyperparams)
     c_plot = CustomPlot(enable_plots, ptl, n_instances)
     es = EarlyStopping(n_instances, ES_REWARD, ES_RANGE)
-    #mc_disc = MountainCarDiscretizer(env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
+    mc_disc = MountainCarDiscretizer(env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
 
     print('Running', n_instances, 'processes')
     if(enable_transfer):
@@ -85,6 +83,8 @@ def run():
 
     obs_length = observation[0].shape[0]
     n_actions = env[0].action_space.n
+    action_dict = env[0].get_action_labels()
+    action_dict_tags = np.array(list(action_dict.items()))[:, 1]
     
     for p in range(n_instances):
         policy_net[p] = DQN(obs_length, n_actions).to(device)

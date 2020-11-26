@@ -14,7 +14,7 @@
     },
     "save_model": {
         "active": true,
-        "path": "out/models/experiment.pth"
+        "path": "out/models/experiment"
     },
     "enable_transfer": true,
     "transfer_hyperparams":{
@@ -28,12 +28,12 @@
         "TRANSFER_DISC": 10
     },
     "network_hyperparams": {
-        "BATCH_SIZE": 32,
+        "BATCH_SIZE": 64,
         "ALPHA": 0.001,
-        "GAMMA": 0.99,
+        "GAMMA": 0.9999,
         "EPS_START": 0.9,
         "EPS_END": 0.01,
-        "EPS_DECAY": 6000,
+        "EPS_DECAY": 2000,
         "TARGET_UPDATE": 10
     },
     "STATE_DIM_BINS": 15

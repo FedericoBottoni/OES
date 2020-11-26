@@ -1,1 +1,2 @@
 from src.custom_envs.MountainCarCustom import MountainCarCustom
+from src.custom_envs.CartPoleCustom import CartPoleCustom

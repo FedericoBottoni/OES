@@ -1,3 +1,4 @@
 from src.test import test
+import sys
 
-test()
+test(sys.argv)

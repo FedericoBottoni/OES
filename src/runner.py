@@ -5,7 +5,6 @@ import numpy as np
 import time
 import atexit
 import json
-from functools import partial
 from collections import namedtuple
 from itertools import count
 from PIL import Image
@@ -13,7 +12,7 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 
-import src.early_stopping as early_stopping
+from src.EarlyStopping import EarlyStopping
 from src.plot.CustomPlot import CustomPlot
 from src.ReplayMemory import ReplayMemory
 from src.DQN import DQN
@@ -33,15 +32,14 @@ def run():
         action_dict_tags = np.array(list(action_dict.items()))[:, 1]
         num_episodes = config['training_episodes']
         max_steps = config['max_steps']
-        stop_condition = [config['stop_condition']['reward_threshold'], config['stop_condition']['n_episodes']]
+        ES_REWARD = config['stop_condition']['reward_threshold']
+        ES_RANGE = config['stop_condition']['n_episodes']
         save_model = config['save_model']['active']
         enable_transfer = config['enable_transfer']
         transfer_hyperparams = config['transfer_hyperparams']
         hyperparams = config['network_hyperparams']
         if save_model:
             save_model_path = config['save_model']['path']
-
-    eval_stop_condition_bound = partial(early_stopping.eval_stop_condition, stop_condition)
 
     n_instances = transfer_hyperparams['N_PROCESSES']
     TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
@@ -74,6 +72,7 @@ def run():
 
     ptl = PTL(enable_transfer, n_instances, transfer_hyperparams)
     c_plot = CustomPlot(enable_plots, ptl, n_instances)
+    es = EarlyStopping(n_instances, ES_REWARD, ES_RANGE)
     #mc_disc = MountainCarDiscretizer(env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
 
     print('Running', n_instances, 'processes')
@@ -160,7 +159,6 @@ def run():
 
 
     early_stop = False
-    i_earlystop = 0
     
     i_episode = np.zeros([n_instances], dtype=np.int16)
     cm_reward = np.zeros([n_instances])
@@ -207,10 +205,9 @@ def run():
 
             if done:
                 print('Env#', p, 'has solved ep#', i_episode[p])
-                ep_cm_reward_dict, last_cm_rewards = sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, \
+                ep_cm_reward_dict = sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, \
                      cm_reward, n_instances, ep_step)
-                if last_cm_rewards.size != 0:
-                    early_stop, i_earlystop = eval_stop_condition_bound(last_cm_rewards.mean(), i_earlystop)
+                early_stop = es.eval_stop_condition(p, cm_reward[p])
                 cm_reward[p] = 0
                 ep_step[p] = 0
                 i_episode[p] += 1
@@ -219,6 +216,11 @@ def run():
 
             if i_episode[p] % hyperparams['TARGET_UPDATE'] == 0:
                 target_net[p].load_state_dict(policy_net[p].state_dict())
+            
+            if early_stop:
+                es.on_stop(p)
+                procs_done[p] = 1
+                early_stop = False
         
         c_plot.add_step()
 
@@ -240,9 +242,10 @@ def run():
 
     end = time.time()
     print('Time elapsed', int(end - start), 's')
-    #best_env = 0
-    #select_action_bound = lambda st : select_action(best_env, st, 0, apply_eps=False).item()
-    #c_plot.plot_state_actions(mc_disc, select_action_bound, policy_net[best_env], action_dict_tags)
+    if obs_length == 2:
+        best_env = 0
+        select_action_bound = lambda st : select_action(best_env, st, 0, apply_eps=False).item()
+        c_plot.plot_state_actions(mc_disc, select_action_bound, policy_net[best_env], action_dict_tags)
     
     dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
 
@@ -263,9 +266,7 @@ def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, cm_rewa
         c_plot.push_ar_episode_len(lens)
         c_plot.add_episode()
         ep_cm_reward_dict.pop(ep_key)
-    else:
-        removed = np.array([])
-    return ep_cm_reward_dict, removed
+    return ep_cm_reward_dict
 
 def dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode):
     if save_model:

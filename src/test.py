@@ -9,6 +9,7 @@ def test(argv):
     with open('config.json') as json_file:
         config = json.load(json_file)
         gym_environment = config['gym_environment']
+        max_steps = config['max_steps']
         save_model_path = config['save_model']['path']
     n = ''
     if len(argv) > 1:
@@ -31,7 +32,8 @@ def test(argv):
     for _ in range(20):
         currentState = env.reset().reshape(1, obs_length)
         rewardSum=0
-        for t in range(300):
+        i = 0
+        for t in range(max_steps):
             env.render()
             action = select_action(torch.from_numpy(currentState).float())
 
@@ -43,6 +45,7 @@ def test(argv):
 
             rewardSum+=reward
             if done:
-                print("Episode finished after {} timesteps reward is {}".format(t+1,rewardSum))
+                i = t
                 break
+        print("Episode finished after {} timesteps reward is {}".format(i+1,rewardSum))
     env.close()

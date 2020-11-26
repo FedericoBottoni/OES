@@ -253,11 +253,11 @@ def run():
 def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, cm_reward, n_instances, i_step):
     ep_key = str(i_episode[p])
     if not ep_key in ep_cm_reward_dict:
-        ep_cm_reward_dict[ep_key] = [None] * n_instances
+        ep_cm_reward_dict[ep_key] = [[None, None]] * n_instances
     
     ep_cm_reward_dict[ep_key][p] = [cm_reward[p], i_step[p]]
 
-    if not None in ep_cm_reward_dict[ep_key]:
+    if not None in [ep_cm_reward_dict[ep_key][i_rew][0] for i_rew in range(n_instances) if procs_done[i_rew] == 0]:
         removed = np.array(ep_cm_reward_dict[ep_key])
         cm_rws = [i[0] for i in removed]
         lens = [i[1] for i in removed]

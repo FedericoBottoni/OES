@@ -14,7 +14,6 @@ class EarlyStopping(object):
         if self._enabled_module:
             self._cm_rews[self._i[p] % self._stop_range, p] = cm_reward
             if self._i[p] >= self._stop_range and self._cm_rews[:, p].mean() >= self._stop_reward_threshold:
-                print(self._cm_rews[:, p])
                 stop = True
             self._i[p] += 1
         return stop

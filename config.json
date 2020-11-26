@@ -5,7 +5,7 @@
         "1": "Right"
     },
     "enable_plots": true,
-    "training_episodes": 200,
+    "training_episodes": 1000,
     "max_steps": 500,
     "stop_condition": {
         "reward_threshold": 195,

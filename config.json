@@ -1,13 +1,5 @@
 {
     "gym_environment": "MountainCarCustom-v0",
-<<<<<<< HEAD
-    "action_names": {
-        "0": "Left",
-        "1": "Nothing",
-        "2": "Right"
-    },
-=======
->>>>>>> baseline
     "enable_plots": true,
     "training_episodes": 1000,
     "max_steps": 2000,

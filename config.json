@@ -22,13 +22,13 @@
         "THETA_MIN": 0.1 
     },
     "network_hyperparams": {
-        "BATCH_SIZE": 64,
+        "BATCH_SIZE": 32,
         "ALPHA": 0.001,
-        "GAMMA": 0.9999,
+        "GAMMA": 0.99,
         "EPS_START": 0.9,
-        "EPS_END": 0.001,
-        "EPS_DECAY": 20,
-        "TARGET_UPDATE": 10
+        "EPS_END": 0.01,
+        "EPS_DECAY": 6000,
+        "TARGET_UPDATE": 2
     },
     "STATE_DIM_BINS": 15
 }

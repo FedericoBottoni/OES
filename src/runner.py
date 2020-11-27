@@ -96,11 +96,14 @@ def run():
         replay_memory[p] = ReplayMemory(10000)
         transfer_memory[p] = ReplayMemory(200)
 
+    def get_epsilon(x):
+        return EPS_END + (EPS_START - EPS_END) * \
+                    math.exp(-1. * x / EPS_DECAY)
+
     def select_action(p, state, steps_done, apply_eps=True):
         sample = random.random()
         if apply_eps:
-            eps_threshold = EPS_END + (EPS_START - EPS_END) * \
-                math.exp(-1. * steps_done / EPS_DECAY)
+            eps_threshold = get_epsilon(steps_done)
             # print(eps_threshold)
         if not apply_eps or sample > eps_threshold:
             with torch.no_grad():
@@ -216,6 +219,9 @@ def run():
 
             if i_episode[p] % hyperparams['TARGET_UPDATE'] == 0:
                 target_net[p].load_state_dict(policy_net[p].state_dict())
+                
+            if p == 0 and i_step % 2000 == 0:
+                print('Epsilon', get_epsilon(i_step), 'at step', i_step)
             
             if early_stop:
                 es.on_stop(p)

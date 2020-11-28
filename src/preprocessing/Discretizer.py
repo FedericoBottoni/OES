@@ -11,7 +11,7 @@ class Discretizer():
         _uniform_bins = [x * _offset + minimum for x in range(n_bins)]
         
         if function:
-            bins = map(function, _uniform_bins)
+            bins = list(map(function, _uniform_bins))
         else:
             bins = _uniform_bins
         self.bins = bins

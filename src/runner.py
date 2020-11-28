@@ -16,7 +16,7 @@ from src.EarlyStopping import EarlyStopping
 from src.plot.CustomPlot import CustomPlot
 from src.ReplayMemory import ReplayMemory
 from src.DQN import DQN
-from src.preprocessing.MountainCarDiscretizer import MountainCarDiscretizer
+from src.preprocessing.CartPoleDiscretizer import CartPoleDiscretizer
 from src.transfer.visits_filters import PTL
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
@@ -69,12 +69,11 @@ def run():
         env[i] = gym.make(gym_environment)
         observation[i] = env[i].reset()
 
-    ptl = PTL(enable_transfer, n_instances, gym_environment, \
-        MountainCarDiscretizer(env[0], [TRANSFER_DISC] * len(env[0].get_state())), transfer_hyperparams)
+    env_disc = CartPoleDiscretizer(env[0], [TRANSFER_DISC] * len(env[0].get_state()))
+    ptl = PTL(enable_transfer, n_instances, gym_environment, env_disc, transfer_hyperparams)
     c_plot = CustomPlot(enable_plots, ptl, n_instances)
     es = EarlyStopping(n_instances, ES_REWARD, ES_RANGE)
-    mc_disc = MountainCarDiscretizer(env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
-
+    
     print('Running', n_instances, 'processes')
     if(enable_transfer):
         print('Transfer enabled, THETA between', THETA_MIN, '-', THETA_MAX, 'with APEX on ep.', TRANSFER_APEX, \
@@ -254,7 +253,7 @@ def run():
     if obs_length == 2:
         best_env = 0
         select_action_bound = lambda st : select_action(best_env, st, 0, apply_eps=False).item()
-        c_plot.plot_state_actions(mc_disc, select_action_bound, policy_net[best_env], action_dict_tags)
+        c_plot.plot_state_actions(env_disc, select_action_bound, policy_net[best_env], action_dict_tags)
     
     dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
 

@@ -11,12 +11,14 @@ def group_SR(groups, data, n, procs_done=None):
     receiving = list()
     dataset = list()
     labels = list()
+    i_undone = 0
     for i in range(n):
         if procs_done is None or not procs_done[i] == 1:
             if i in groups[0]:
-                sending.append(data[i])
+                sending.append(data[i_undone])
             if i in groups[1]:
-                receiving.append(data[i])
+                receiving.append(data[i_undone])
+            i_undone += 1
     if len(sending) > 0:
         dataset.append(torch.tensor(sending, dtype=torch.float).mean().item())
         labels.append(SR_LABELS[0])

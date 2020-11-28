@@ -114,7 +114,11 @@ class PTL():
         return [n for n in range(self._n_instances) if n%2==0]
     
     def get_receivers(self):
-        return [n for n in range(self._n_instances) if n%2==1] 
+        return [n for n in range(self._n_instances) if n%2==1]
+
+    def get_active_receivers(self, procs_done):
+        rec = self.get_receivers()
+        return [rec[n] for n in range(len(rec)) if not procs_done[rec[n]]==1]
             
     # sender even, receiver odd
     def get_sender(self, receiver):

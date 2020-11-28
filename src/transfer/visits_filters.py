@@ -71,8 +71,8 @@ class PTL():
             if len(replay_memory[p]) < self._TRANSFER_SIZE:
                     transitions.append([])
             else:
-                # transitions.append(replay_memory[p].memory[-self._TRANSFER_SIZE:]) # BL
-                transitions.append(self.provide_transitions(p, policy_net[p])) # EXP1
+                transitions.append(replay_memory[p].memory[-self._TRANSFER_SIZE:]) # BL
+                # transitions.append(self.provide_transitions(p, policy_net[p])) # EXP1
         return transitions
 
 

@@ -6,13 +6,13 @@ import numpy as np
 
 SR_LABELS = ['Senders', 'Receivers']
 
-def group_SR(groups, data, procs_done=None):
+def group_SR(groups, data, n, procs_done=None):
     sending = list()
     receiving = list()
     dataset = list()
     labels = list()
-    for i in range(len(data)):
-        if  procs_done is None or not procs_done[i] == 1:
+    for i in range(n):
+        if procs_done is None or not procs_done[i] == 1:
             if i in groups[0]:
                 sending.append(data[i])
             if i in groups[1]:
@@ -32,6 +32,7 @@ class TBoard(object):
         self._tb_activated = tb_activated
         self._ptl = ptl
         self._instances = [str(i) for i in range(n_instances)]
+        self._n_instances = n_instances
         self._writer = SummaryWriter() if self._tb_activated else None
         self._n_step = 0
         self._n_episode = 0
@@ -89,7 +90,8 @@ class TBoard(object):
         if not self._ptl._enable_transfer:
             self.push_scalar("Loss/Loss Mn.", self._n_step, torch.tensor(dataset, dtype=torch.float).mean())
         else:
-            g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], dataset, procs_done=dones)
+            g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], dataset, \
+                self._n_instances, procs_done=dones)
             self.push_scalars("Loss/Loss Mn", labels, self._n_step, g_dataset)
 
     def push_ar_cm_reward(self, dones, dataset):
@@ -98,7 +100,8 @@ class TBoard(object):
         if not self._ptl._enable_transfer:
             self.push_scalar("Reward/Cumulative Reward Mn.", self._n_step, torch.tensor(dataset, dtype=torch.float).mean())
         else:
-            g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], dataset, procs_done=dones)
+            g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], dataset, \
+                self._n_instances, procs_done=dones)
             self.push_scalars("Reward/Cumulative Reward Mn", labels, self._n_step, g_dataset)
 
     def push_ar_cm_reward_ep(self, dataset):
@@ -107,17 +110,18 @@ class TBoard(object):
         if not self._ptl._enable_transfer:
             self.push_scalar("Reward/Cumulative Reward Ep. Mn.", self._n_episode, torch.tensor(filt_dataset, dtype=torch.float).mean())
         else:
-            g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], filt_dataset, procs_done=dones)
+            g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], filt_dataset, \
+                self._n_instances, procs_done=dones)
             self.push_scalars("Reward/Cumulative Reward Ep. Mn", labels, self._n_episode, g_dataset)
 
     def push_ar_episode_len(self, dataset):
         filt_labels, filt_dataset, dones = self.get_sync_undone_data(dataset)
-        print(filt_labels, filt_dataset, dones)
         self.push_scalars("Episode/Episode Length", filt_labels, self._n_episode, filt_dataset)
         if not self._ptl._enable_transfer:
             self.push_scalar("Episode/Episode Length Mn.", self._n_episode, torch.tensor(filt_dataset, dtype=torch.float).mean())
         else:
-            g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], filt_dataset, procs_done=dones)
+            g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], filt_dataset, \
+                self._n_instances, procs_done=dones)
             self.push_scalars("Episode/Episode Length Mn", labels, self._n_episode, g_dataset)
 
 

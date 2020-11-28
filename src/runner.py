@@ -16,7 +16,7 @@ from src.EarlyStopping import EarlyStopping
 from src.plot.CustomPlot import CustomPlot
 from src.ReplayMemory import ReplayMemory
 from src.DQN import DQN
-from src.preprocessing.MountainCarDiscretizer import MountainCarDiscretizer
+from src.preprocessing.CartPoleDiscretizer import CartPoleDiscretizer
 from src.transfer.visits_filters import PTL
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
@@ -28,8 +28,6 @@ def run():
         config = json.load(json_file)
         enable_plots = config['enable_plots']
         gym_environment = config['gym_environment']
-        action_dict = config['action_names']
-        action_dict_tags = np.array(list(action_dict.items()))[:, 1]
         num_episodes = config['training_episodes']
         max_steps = config['max_steps']
         ES_REWARD = config['stop_condition']['reward_threshold']
@@ -71,12 +69,11 @@ def run():
         env[i] = gym.make(gym_environment)
         observation[i] = env[i].reset()
 
-    ptl = PTL(enable_transfer, n_instances, gym_environment, \
-        MountainCarDiscretizer(env[0], [TRANSFER_DISC] * len(env[0].get_state())), transfer_hyperparams)
+    env_disc = CartPoleDiscretizer(env[0], [TRANSFER_DISC] * len(env[0].get_state()))
+    ptl = PTL(enable_transfer, n_instances, gym_environment, env_disc, transfer_hyperparams)
     c_plot = CustomPlot(enable_plots, ptl, n_instances)
     es = EarlyStopping(n_instances, ES_REWARD, ES_RANGE)
-    mc_disc = MountainCarDiscretizer(env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
-
+    
     print('Running', n_instances, 'processes')
     if(enable_transfer):
         print('Transfer enabled, THETA between', THETA_MIN, '-', THETA_MAX, 'with APEX on ep.', TRANSFER_APEX, \
@@ -87,9 +84,8 @@ def run():
 
     obs_length = observation[0].shape[0]
     n_actions = env[0].action_space.n
-
-    # if gpu is to be used
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    action_dict = env[0].get_action_labels()
+    action_dict_tags = np.array(list(action_dict.items()))[:, 1]
     
     for p in range(n_instances):
         policy_net[p] = DQN(obs_length, n_actions).to(device)
@@ -101,11 +97,14 @@ def run():
         replay_memory[p] = ReplayMemory(10000)
         transfer_memory[p] = ReplayMemory(32)
 
+    def get_epsilon(x):
+        return EPS_END + (EPS_START - EPS_END) * \
+                    math.exp(-1. * x / EPS_DECAY)
+
     def select_action(p, state, steps_done, apply_eps=True):
         sample = random.random()
         if apply_eps:
-            eps_threshold = EPS_END + (EPS_START - EPS_END) * \
-                math.exp(-1. * steps_done / EPS_DECAY)
+            eps_threshold = get_epsilon(steps_done)
             # print(eps_threshold)
         if not apply_eps or sample > eps_threshold:
             with torch.no_grad():
@@ -223,6 +222,9 @@ def run():
 
             if i_episode[p] % hyperparams['TARGET_UPDATE'] == 0:
                 target_net[p].load_state_dict(policy_net[p].state_dict())
+                
+            if p == 0 and i_step % 2000 == 0:
+                print('Epsilon', get_epsilon(i_step), 'at step', i_step)
             
             if early_stop:
                 es.on_stop(p)
@@ -252,7 +254,7 @@ def run():
     if obs_length == 2:
         best_env = 0
         select_action_bound = lambda st : select_action(best_env, st, 0, apply_eps=False).item()
-        c_plot.plot_state_actions(mc_disc, select_action_bound, policy_net[best_env], action_dict_tags)
+        c_plot.plot_state_actions(env_disc, select_action_bound, policy_net[best_env], action_dict_tags)
     
     dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
 

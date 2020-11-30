@@ -45,16 +45,8 @@ def run():
             save_model_path = config['save_model']['path']
 
     n_instances = transfer_hyperparams['N_PROCESSES']
-    TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
-
-    env = [None] * n_instances
-    observation = [None] * n_instances
-    policy_net = [None] * n_instances
-    target_net = [None] * n_instances
-    optimizer = [None] * n_instances
-    replay_memory = [None] * n_instances
-    transfer_memory = [None] * n_instances
-    state = [None] * n_instances
+    ONE_BRAIN = transfer_hyperparams['ONE_BRAIN']
+    enable_transfer = enable_transfer and not ONE_BRAIN
     
     ALPHA = hyperparams['ALPHA']
     EPS_END = hyperparams['EPS_END']
@@ -69,6 +61,15 @@ def run():
     TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
     THETA_MAX = transfer_hyperparams['THETA_MAX']
     THETA_MIN = transfer_hyperparams['THETA_MIN']
+
+    env = [None] * n_instances
+    observation = [None] * n_instances
+    policy_net = [None] * n_instances
+    target_net = [None] * n_instances
+    optimizer = [None] * n_instances
+    replay_memory = [None] * n_instances
+    transfer_memory = [None] * n_instances
+    state = [None] * n_instances
     
     for i in range(n_instances):
         env[i] = gym.make(gym_environment)
@@ -83,6 +84,8 @@ def run():
     if(enable_transfer):
         print('Transfer enabled, THETA between', THETA_MIN, '-', THETA_MAX, 'with APEX on ep.', TRANSFER_APEX, \
             'every', TRANSFER_INTERVAL, 'steps')
+    elif(ONE_BRAIN):
+        print('Transfer enabled, running in ONE BRAIN')
 
     # if gpu is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -179,6 +182,8 @@ def run():
     atexit.register(dispose, c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
     for i_step in count():
         for p in range(n_instances):
+            p_t = 0 if ONE_BRAIN else p
+
             if procs_done[p] == 1:
                 continue
             if i_episode[p] == num_episodes:
@@ -189,7 +194,7 @@ def run():
                 state[p] = torch.from_numpy(observation[p]).float()
 
 
-            action = select_action(p, state[p], i_step)
+            action = select_action(p_t, state[p], i_step)
             observation[p], reward, done, _ = env[p].step(action.item())
 
             reward = torch.tensor([reward], device=device)
@@ -204,7 +209,7 @@ def run():
                 next_state = None
 
             # Store the transition in memory
-            replay_memory[p].push(state[p], action, next_state, reward)
+            replay_memory[p_t].push(state[p], action, next_state, reward)
 
             if enable_transfer:
                 ptl.update_state_visits(p, state[p])
@@ -213,7 +218,7 @@ def run():
             state[p] = next_state
 
             # Perform one step of the optimization (on the target network)
-            loss[p] = optimize_model(p, c_plot, i_episode, procs_done)
+            loss[p] = optimize_model(p_t, c_plot, i_episode, procs_done)
 
             if done:
                 print('Env#', p, 'has solved ep#', i_episode[p])

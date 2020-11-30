@@ -13,21 +13,22 @@ class PTL():
         self._n_instances = n_instances
         self._enable_transfer = enable_transfer
         self._discretizer = discretizer
-        self._TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
-        self._TRANSFER_SIZE = transfer_hyperparams['TRANSFER_SIZE']
-        self._THETA_MAX = transfer_hyperparams['THETA_MAX']
-        self._THETA_MIN = transfer_hyperparams['THETA_MIN']
-        self._THETA_DECAY = transfer_hyperparams['THETA_DECAY']
-        self._THETA_DIFF = transfer_hyperparams['THETA_MAX'] - transfer_hyperparams['THETA_MIN']
-        self._TRANSFER_DISC = transfer_hyperparams['TRANSFER_DISC']
-        self._states = self._discretizer.get_bins()
-        self._state_visits = [None] * n_instances
-    
-        self._virtual_env = gym.make(gym_environment).unwrapped
-        self._virtual_env.reset()
+        if enable_transfer:
+            self._TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
+            self._TRANSFER_SIZE = transfer_hyperparams['TRANSFER_SIZE']
+            self._THETA_MAX = transfer_hyperparams['THETA_MAX']
+            self._THETA_MIN = transfer_hyperparams['THETA_MIN']
+            self._THETA_DECAY = transfer_hyperparams['THETA_DECAY']
+            self._THETA_DIFF = transfer_hyperparams['THETA_MAX'] - transfer_hyperparams['THETA_MIN']
+            self._TRANSFER_DISC = transfer_hyperparams['TRANSFER_DISC']
+            self._states = self._discretizer.get_bins()
+            self._state_visits = [None] * n_instances
+        
+            self._virtual_env = gym.make(gym_environment).unwrapped
+            self._virtual_env.reset()
 
-        for p in range(n_instances):
-            self._state_visits[p] = torch.zeros(tuple(self._discretizer.size), dtype=int)
+            for p in range(n_instances):
+                self._state_visits[p] = torch.zeros(tuple(self._discretizer.size), dtype=int)
         
     def get_index_from_state(self, state):
         return self._discretizer.disc_index(state)
@@ -39,8 +40,9 @@ class PTL():
         return state
     
     def update_state_visits(self, p, state):
-        st_index = tuple(self.get_index_from_state(state))
-        self._state_visits[p][st_index] += 1
+        if self._enable_transfer:
+            st_index = tuple(self.get_index_from_state(state))
+            self._state_visits[p][st_index] += 1
 
 
     # "provide" transfer

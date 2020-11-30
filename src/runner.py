@@ -12,15 +12,20 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 
+from src.preprocessing.CartPoleDiscretizer import CartPoleDiscretizer
+from src.preprocessing.MountainCarDiscretizer import MountainCarDiscretizer
 from src.EarlyStopping import EarlyStopping
 from src.plot.CustomPlot import CustomPlot
 from src.ReplayMemory import ReplayMemory
 from src.DQN import DQN
-from src.preprocessing.CartPoleDiscretizer import CartPoleDiscretizer
 from src.transfer.visits_filters import PTL
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
+Discretizer = {
+    "MountainCarCustom-v0": MountainCarDiscretizer,
+    "CartPoleCustom-v0": CartPoleDiscretizer
+}
 
 def run():
     start = time.time()
@@ -69,7 +74,7 @@ def run():
         env[i] = gym.make(gym_environment)
         observation[i] = env[i].reset()
 
-    env_disc = CartPoleDiscretizer(env[0], [TRANSFER_DISC] * len(env[0].get_state()))
+    env_disc = Discretizer[gym_environment](env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
     ptl = PTL(enable_transfer, n_instances, gym_environment, env_disc, transfer_hyperparams)
     c_plot = CustomPlot(enable_plots, ptl, n_instances)
     es = EarlyStopping(n_instances, ES_REWARD, ES_RANGE)

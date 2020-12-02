@@ -127,10 +127,19 @@ class TBoard(object):
             self.push_scalars("Episode/Episode Length Mn", labels, self._n_episode, g_dataset)
 
 
-    # Multi charts
-    def push_sending_dict(self, my_dict):
-        self.push_scalars_dict("Transfer/Sending", self._sending_data, my_dict)
+    def push_sending(self, dones, dataset):
+        if self._ptl._enable_transfer:
+            filt_labels, filt_dataset = self.get_async_undone_data(dones, dataset)
+            self.push_scalars("Transfer/Sending", filt_labels, self._n_step, filt_dataset)
+            g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], filt_dataset, \
+                self._n_instances, procs_done=dones)
+            self.push_scalars("Transfer/Sending Mn", labels, self._n_step, g_dataset)
 
-    def push_receiving_dict(self, my_dict):
-        self.push_scalars_dict("Transfer/Receiving", self._receiving_data, my_dict)
+    def push_receiving(self, dones, dataset):
+        if self._ptl._enable_transfer:
+            filt_labels, filt_dataset = self.get_async_undone_data(dones, dataset)
+            self.push_scalars("Transfer/Receiving", filt_labels, self._n_step, filt_dataset)
+            g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], filt_dataset, \
+                self._n_instances, procs_done=dones)
+            self.push_scalars("Transfer/Receiving Mn", labels, self._n_step, g_dataset)
         

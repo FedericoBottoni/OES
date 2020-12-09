@@ -88,8 +88,8 @@ class PTL():
 
                 sender_sizes[str(sender)] += out_len
                 receiver_sizes[str(receiver)] += out_len
-        self._c_plot.push_sending_dict(sender_sizes)
-        self._c_plot.push_receiving_dict(receiver_sizes)
+        # self._c_plot.push_sending_dict(sender_sizes)
+        # self._c_plot.push_receiving_dict(receiver_sizes)
         self.compute_theta_decay(step)
         return out_data
     

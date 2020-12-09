@@ -124,14 +124,18 @@ def run():
             return torch.tensor([[random.randrange(n_actions)]], device=device, dtype=torch.long)
 
     def optimize_model(p, c_plot, episode, procs_done):
-        theta = ptl.get_theta(episode[p]) if len(ptl.get_active_receivers(procs_done)) > 0 else 0
+        theta = ptl.get_theta(episode[p]) if len(ptl.get_active_receivers(procs_done)) > 0 and \
+            p in ptl.get_receivers() else 0
         transfer_batch_size = round(BATCH_SIZE * theta)
+        transfer_batch_size = transfer_batch_size if len(transfer_memory[p]) >= transfer_batch_size else len(transfer_memory[p])
         if len(replay_memory[p]) < BATCH_SIZE - transfer_batch_size:
             return None
+        transfer_received_sizes[p] = transfer_batch_size
         transitions = replay_memory[p].sample(BATCH_SIZE - transfer_batch_size)
-        if len(transfer_memory[p]) >= transfer_batch_size:
+        if transfer_batch_size > 0:
             transitions_trans = ptl.gather_transfer(p, transfer_memory[p], transfer_batch_size)
             transitions.extend(transitions_trans)
+
         batch = Transition(*zip(*transitions))
         # Compute a mask of non-final states and concatenate the batch elements
         # (a final state would've been the one after which simulation ended)
@@ -178,6 +182,7 @@ def run():
     loss = np.zeros([n_instances])
     ep_cm_reward_dict = {}
     procs_done = np.zeros([n_instances])
+    transfer_received_sizes = np.zeros([n_instances])
     
     atexit.register(dispose, c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
     for i_step in count():
@@ -244,6 +249,7 @@ def run():
         
         c_plot.add_step()
 
+
         if not math.isnan(loss[0]):
             c_plot.push_ar_loss(procs_done, loss)
             loss = np.zeros([n_instances])
@@ -256,6 +262,8 @@ def run():
                     transfer_memory[ptl.get_receiver(p_sender)].push_t(tr)
 
         c_plot.push_ar_cm_reward(procs_done, cm_reward)
+        c_plot.push_receiving(procs_done, transfer_received_sizes)
+        transfer_received_sizes = np.zeros([n_instances])
 
         if len(np.nonzero(procs_done)[0]) == n_instances:
             break

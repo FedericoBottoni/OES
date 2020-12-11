@@ -18,9 +18,9 @@ from src.EarlyStopping import EarlyStopping
 from src.plot.CustomPlot import CustomPlot
 from src.ReplayMemory import ReplayMemory
 from src.DQN import DQN
-from src.transfer.visits_filters import PTL
+from src.transfer.rnd_filters import PTL
 
-Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
+Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward', 'confidence'))
 
 Discretizer = {
     "MountainCarCustom-v0": MountainCarDiscretizer,
@@ -73,9 +73,15 @@ def run():
     for i in range(n_instances):
         env[i] = gym.make(gym_environment)
         observation[i] = env[i].reset()
+    
+    obs_length = observation[0].shape[0]
+    n_actions = env[0].action_space.n
+    action_dict = env[0].get_action_labels()
+    action_dict_tags = np.array(list(action_dict.items()))[:, 1]
 
     env_disc = Discretizer[gym_environment](env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
-    ptl = PTL(enable_transfer, n_instances, gym_environment, env_disc, transfer_hyperparams)
+    # ptl = PTL(enable_transfer, n_instances, gym_environment, env_disc, transfer_hyperparams)
+    ptl = PTL(enable_transfer, n_instances,  obs_length, ALPHA, transfer_hyperparams)
     c_plot = CustomPlot(enable_plots, ptl, n_instances)
     es = EarlyStopping(n_instances, ES_REWARD, ES_RANGE)
     
@@ -86,11 +92,6 @@ def run():
 
     # if gpu is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    obs_length = observation[0].shape[0]
-    n_actions = env[0].action_space.n
-    action_dict = env[0].get_action_labels()
-    action_dict_tags = np.array(list(action_dict.items()))[:, 1]
     
     for p in range(n_instances):
         policy_net[p] = DQN(obs_length, n_actions).to(device)

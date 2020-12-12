@@ -63,7 +63,8 @@ def run():
     BATCH_SIZE = hyperparams['BATCH_SIZE']
     GAMMA = hyperparams['GAMMA']
     STATE_DIM_BINS = config['STATE_DIM_BINS']
-
+    
+    TRANSFER_BUFFER_SIZE = transfer_hyperparams['TRANSFER_BUFFER_SIZE']
     TRANSFER_INTERVAL = transfer_hyperparams['TRANSFER_INTERVAL']
     TRANSFER_DISC = transfer_hyperparams['TRANSFER_DISC']
     TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
@@ -101,7 +102,7 @@ def run():
         
         optimizer[p] = optim.Adam(policy_net[p].parameters(), lr=ALPHA, )
         replay_memory[p] = ReplayMemory(10000)
-        transfer_memory[p] = ReplayMemory(32)
+        transfer_memory[p] = ReplayMemory(TRANSFER_BUFFER_SIZE)
 
     def get_epsilon(x):
         return EPS_END + (EPS_START - EPS_END) * \

@@ -26,3 +26,4 @@ class Curiosity:
 
         loss.backward()
         self._optimizer.step()
+        return loss

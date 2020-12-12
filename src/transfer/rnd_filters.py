@@ -23,14 +23,14 @@ class PTL():
 
 
     def update_state_visits(self, p, state):
-        self._curiosity[p].update(state)
+        return -1 * self._curiosity[p].update(state)
 
     def confidence(self, p, state):
         return -1 * self._curiosity[p].uncertainty(state).item()
 
     # "provide" transfer
     def provide_transitions(self, p, replay_memory):
-        confidences = map(lambda x: x.confidence, replay_memory.memory)
+        confidences = torch.tensor(list(map(lambda x: x.confidence, replay_memory.memory)))
         indxs = self.provide_transitions_visits_top(confidences)
         sending_knowledge = [replay_memory.memory[i] for i in indxs]
         return sending_knowledge
@@ -46,15 +46,15 @@ class PTL():
                     transitions.append([])
             else:
                 # transitions.append(replay_memory[p].memory[-self._TRANSFER_SIZE:]) # BL
-                transitions.append(self.provide_transitions(p, replay_memory)) # EXP1
+                transitions.append(self.provide_transitions(p, replay_memory[p])) # EXP1
         return transitions
 
 
     # "gather" transfer
     def gather_transitions(self, p, transfer_memory, size):
-        confidences = map(lambda x: x.confidence, transfer_memory)
+        confidences = torch.tensor(list(map(lambda x: x.confidence, transfer_memory.memory)))
         indxs = self.gather_transitions_visits_bottom(confidences, size)
-        transitions = [transfer_memory[i] for i in indxs]
+        transitions = [transfer_memory.memory[i] for i in indxs]
         return transitions
 
     def gather_transitions_visits_bottom(self, buffer, k):

@@ -211,10 +211,10 @@ def run():
                 next_state = None
 
             # Store the transition in memory
-            replay_memory[p].push(state[p], action, next_state, reward)
-
+            confidence = None
             if enable_transfer:
-                ptl.update_state_visits(p, state[p])
+                confidence = ptl.update_state_visits(p, state[p])
+            replay_memory[p].push(state[p], action, next_state, reward, confidence)
 
             # Move to the next state
             state[p] = next_state

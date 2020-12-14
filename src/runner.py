@@ -182,6 +182,7 @@ def run():
     ep_cm_reward_dict = {}
     procs_done = np.zeros([n_instances])
     transfer_received_sizes = np.zeros([n_instances])
+    cm_confidence = np.zeros([n_instances])
     
     atexit.register(dispose, c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
     for i_step in count():
@@ -211,9 +212,8 @@ def run():
                 next_state = None
 
             # Store the transition in memory
-            confidence = None
-            if enable_transfer:
-                confidence = ptl.update_state_visits(p, state[p])
+            confidence = ptl.update_state_visits(p, state[p])
+            cm_confidence[p] -= confidence # confidence is negative
             replay_memory[p].push(state[p], action, next_state, reward, confidence)
 
             # Move to the next state
@@ -225,9 +225,10 @@ def run():
             if done:
                 print('Env#', p, 'has solved ep#', i_episode[p])
                 ep_cm_reward_dict = sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, \
-                     cm_reward, n_instances, ep_step)
+                     cm_reward, cm_confidence, n_instances, ep_step)
                 early_stop = es.eval_stop_condition(p, cm_reward[p])
                 cm_reward[p] = 0
+                cm_confidence[p] = 0
                 ep_step[p] = 0
                 i_episode[p] += 1
             else:
@@ -238,7 +239,8 @@ def run():
                 
             if p == 0 and i_step % 2000 == 0:
                 print('Epsilon', get_epsilon(i_step), 'at step', i_step)
-            
+
+            confidence = None
             if early_stop:
                 es.on_stop(p)
                 procs_done[p] = 1
@@ -275,20 +277,23 @@ def run():
     dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
 
 
-def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, cm_reward, n_instances, i_step):
+def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, cm_reward, cm_confidence, n_instances, i_step):
     ep_key = str(i_episode[p])
     if not ep_key in ep_cm_reward_dict:
         ep_cm_reward_dict[ep_key] = [[None, None]] * n_instances
     
-    ep_cm_reward_dict[ep_key][p] = [cm_reward[p], i_step[p]]
+    ep_cm_reward_dict[ep_key][p] = [cm_reward[p], i_step[p], cm_confidence[p]]
 
-    if not None in [ep_cm_reward_dict[ep_key][i_rew][0] for i_rew in range(n_instances) if procs_done[i_rew] == 0]:
+    if not None in [ep_cm_reward_dict[ep_key][i_raw][0] for i_raw in range(n_instances) if procs_done[i_raw] == 0]:
         removed = np.array(ep_cm_reward_dict[ep_key])
         cm_rws = [i[0] for i in removed]
         lens = [i[1] for i in removed]
+        confs = [i[2] for i in removed]
+        avg_confidence = [confs[i] / lens[i] for i in range(n_instances)]
         print('Closing episode', ep_key, 'with cm_rew', cm_rws)
         c_plot.push_ar_cm_reward_ep(cm_rws)
         c_plot.push_ar_episode_len(lens)
+        c_plot.push_ar_confidence(avg_confidence)
         c_plot.add_episode()
         ep_cm_reward_dict.pop(ep_key)
     return ep_cm_reward_dict

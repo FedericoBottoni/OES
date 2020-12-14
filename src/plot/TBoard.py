@@ -90,7 +90,7 @@ class TBoard(object):
         filt_labels, filt_dataset = self.get_async_undone_data(dones, dataset)
         self.push_scalars("Loss/Loss", filt_labels, self._n_step, filt_dataset)
         if not self._ptl._enable_transfer:
-            self.push_scalar("Loss/Loss Mn.", self._n_step, torch.tensor(dataset, dtype=torch.float).mean())
+            self.push_scalar("Loss/Loss Mn", self._n_step, torch.tensor(dataset, dtype=torch.float).mean())
         else:
             g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], dataset, \
                 self._n_instances, procs_done=dones)
@@ -100,7 +100,7 @@ class TBoard(object):
         filt_labels, filt_dataset = self.get_async_undone_data(dones, dataset)
         self.push_scalars("Reward/Cumulative Reward", filt_labels, self._n_step, filt_dataset)
         if not self._ptl._enable_transfer:
-            self.push_scalar("Reward/Cumulative Reward Mn.", self._n_step, torch.tensor(dataset, dtype=torch.float).mean())
+            self.push_scalar("Reward/Cumulative Reward Mn", self._n_step, torch.tensor(dataset, dtype=torch.float).mean())
         else:
             g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], dataset, \
                 self._n_instances, procs_done=dones)
@@ -108,24 +108,33 @@ class TBoard(object):
 
     def push_ar_cm_reward_ep(self, dataset):
         filt_labels, filt_dataset, dones = self.get_sync_undone_data(dataset)
-        self.push_scalars("Reward/Cumulative Reward Ep.", filt_labels, self._n_episode, filt_dataset)
+        self.push_scalars("Reward/Cumulative Reward Ep", filt_labels, self._n_episode, filt_dataset)
         if not self._ptl._enable_transfer:
-            self.push_scalar("Reward/Cumulative Reward Ep. Mn.", self._n_episode, torch.tensor(filt_dataset, dtype=torch.float).mean())
+            self.push_scalar("Reward/Cumulative Reward Ep Mn", self._n_episode, torch.tensor(filt_dataset, dtype=torch.float).mean())
         else:
             g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], filt_dataset, \
                 self._n_instances, procs_done=dones)
-            self.push_scalars("Reward/Cumulative Reward Ep. Mn", labels, self._n_episode, g_dataset)
+            self.push_scalars("Reward/Cumulative Reward Ep Mn", labels, self._n_episode, g_dataset)
 
     def push_ar_episode_len(self, dataset):
         filt_labels, filt_dataset, dones = self.get_sync_undone_data(dataset)
         self.push_scalars("Episode/Episode Length", filt_labels, self._n_episode, filt_dataset)
         if not self._ptl._enable_transfer:
-            self.push_scalar("Episode/Episode Length Mn.", self._n_episode, torch.tensor(filt_dataset, dtype=torch.float).mean())
+            self.push_scalar("Episode/Episode Length Mn", self._n_episode, torch.tensor(filt_dataset, dtype=torch.float).mean())
         else:
             g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], filt_dataset, \
                 self._n_instances, procs_done=dones)
             self.push_scalars("Episode/Episode Length Mn", labels, self._n_episode, g_dataset)
 
+    def push_ar_confidence(self, dataset):
+        filt_labels, filt_dataset, dones = self.get_sync_undone_data(dataset)
+        self.push_scalars("Transfer/Confidence AVG Ep", filt_labels, self._n_episode, filt_dataset)
+        if not self._ptl._enable_transfer:
+            self.push_scalar("Transfer/Confidence AVG Ep Mn", self._n_episode, torch.tensor(filt_dataset, dtype=torch.float).mean())
+        else:
+            g_dataset, labels = group_SR([self._ptl.get_senders(), self._ptl.get_receivers()], filt_dataset, \
+                self._n_instances, procs_done=dones)
+            self.push_scalars("Transfer/Confidence AVG Ep Mn", labels, self._n_episode, g_dataset)
 
     def push_sending(self, dones, dataset):
         if self._ptl._enable_transfer:

@@ -1,11 +1,11 @@
 {
-    "gym_environment": "MountainCarCustom-v0",
+    "gym_environment": "CartPoleCustom-v0",
     "enable_plots": true,
-    "training_episodes": 1000,
-    "max_steps": 2000,
+    "training_episodes": 150,
+    "max_steps": 500,
     "stop_condition": {
         "reward_threshold": null,
-        "n_episodes": null 
+        "n_episodes": null
     },
     "save_model": {
         "active": true,
@@ -21,17 +21,17 @@
         "THETA_DECAY": 125,
         "THETA_MAX": 0.5,
         "THETA_MIN": 0.03,
-        "ENCODED_SIZE": 64,
+        "ENCODED_SIZE": 128,
         "TRANSFER_DISC": null
     },
     "network_hyperparams": {
-        "BATCH_SIZE": 32,
+        "BATCH_SIZE": 64,
         "ALPHA": 0.001,
-        "GAMMA": 0.99,
+        "GAMMA": 0.999,
         "EPS_START": 0.9,
         "EPS_END": 0.01,
-        "EPS_DECAY": 6000,
-        "TARGET_UPDATE": 2
+        "EPS_DECAY": 400,
+        "TARGET_UPDATE": 10
     },
     "STATE_DIM_BINS": 15
 }

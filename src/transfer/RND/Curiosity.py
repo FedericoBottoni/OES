@@ -12,18 +12,11 @@ class Curiosity:
     def uncertainty(self, state):
         predicted = self._predictor(state)
         target = self._target(state)
-
         return self._criterion(predicted, target)
         
-
     def update(self, state):
         self._optimizer.zero_grad() 
-
-        predicted = self._predictor(state)
-        target = self._target(state)
-
-        loss = self._criterion(predicted, target)
-
+        loss = self.uncertainty(state)
         loss.backward()
         self._optimizer.step()
         return loss

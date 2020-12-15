@@ -52,13 +52,14 @@ class PTL():
 
     # "gather" transfer
     def gather_transitions(self, p, transfer_memory, size):
-        confidences = torch.tensor(list(map(lambda x: x.confidence, transfer_memory.memory)))
-        indxs = self.gather_transitions_visits_bottom(confidences, size)
+        confidences = torch.tensor(list(map(lambda x: x.confidence - self.confidence(p, x.state), \
+            transfer_memory.memory)))
+        indxs = self.gather_transitions_visits(confidences, size)
         transitions = [transfer_memory.memory[i] for i in indxs]
         return transitions
 
-    def gather_transitions_visits_bottom(self, buffer, k):
-        _, indxs = torch.topk(buffer, k, largest=False)
+    def gather_transitions_visits(self, buffer, k):
+        _, indxs = torch.topk(buffer, k)
         return indxs
 
     def gather_transfer(self, p, transfer_memory, size):

@@ -18,7 +18,7 @@ from src.EarlyStopping import EarlyStopping
 from src.plot.CustomPlot import CustomPlot
 from src.ReplayMemory import ReplayMemory
 from src.DQN import DQN
-from src.transfer.rnd_filters import PTL
+from src.transfer.q_rnd_filters import PTL
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward', 'confidence'))
 
@@ -26,6 +26,8 @@ Discretizer = {
     "MountainCarCustom-v0": MountainCarDiscretizer,
     "CartPoleCustom-v0": CartPoleDiscretizer
 }
+
+ACTION_DIMS = 1
 
 def run():
     start = time.time()
@@ -82,7 +84,7 @@ def run():
 
     env_disc = Discretizer[gym_environment](env[0], [STATE_DIM_BINS] * len(env[0].get_state()))
     # ptl = PTL(enable_transfer, n_instances, gym_environment, env_disc, transfer_hyperparams)
-    ptl = PTL(enable_transfer, n_instances,  obs_length, ALPHA, transfer_hyperparams)
+    ptl = PTL(enable_transfer, n_instances,  obs_length + ACTION_DIMS, ALPHA, transfer_hyperparams)
     c_plot = CustomPlot(enable_plots, ptl, n_instances)
     es = EarlyStopping(n_instances, ES_REWARD, ES_RANGE)
     
@@ -90,6 +92,8 @@ def run():
     if(enable_transfer):
         print('Transfer enabled, THETA between', THETA_MIN, '-', THETA_MAX, 'with APEX on ep.', TRANSFER_APEX, \
             'every', TRANSFER_INTERVAL, 'steps')
+    else:
+        print('!! NO TRANSFER MECHANISM ENABLED !!')
 
     # if gpu is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -212,7 +216,7 @@ def run():
                 next_state = None
 
             # Store the transition in memory
-            confidence = ptl.update_state_visits(p, state[p])
+            confidence = ptl.update_state_visits(p, state[p], action)
             cm_confidence[p] -= confidence # confidence is negative
             replay_memory[p].push(state[p], action, next_state, reward, confidence)
 

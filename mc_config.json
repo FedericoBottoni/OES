@@ -11,7 +11,7 @@
         "active": true,
         "path": "out/models/experiment"
     },
-    "enable_transfer": false,
+    "enable_transfer": true,
     "transfer_hyperparams":{
         "N_PROCESSES" : 6,
         "TRANSFER_SIZE": 10,
@@ -21,7 +21,7 @@
         "THETA_DECAY": 125,
         "THETA_MAX": 0.5,
         "THETA_MIN": 0.03,
-        "ENCODED_SIZE": 64,
+        "ENCODED_SIZE": 32,
         "TRANSFER_DISC": null
     },
     "network_hyperparams": {

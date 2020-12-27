@@ -54,7 +54,7 @@ class PTL():
 
     # "gather" transfer
     def gather_transitions(self, p, transfer_memory, size):
-        confidences = torch.tensor(list(map(lambda x: x.confidence - self.confidence(p, x.state), \
+        confidences = torch.tensor(list(map(lambda x: x.confidence - self.confidence(p, x.state, x.action), \
             transfer_memory.memory)))
         indxs = self.gather_transitions_visits(confidences, size)
         transitions = [transfer_memory.memory[i] for i in indxs]

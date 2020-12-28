@@ -13,13 +13,13 @@ class PTL():
         self._n_instances = n_instances
         self._enable_transfer = enable_transfer
         self._discretizer = discretizer
-        self._TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
-        self._TRANSFER_SIZE = transfer_hyperparams['TRANSFER_SIZE']
+        self._TRANSFER_APEX = int(transfer_hyperparams['TRANSFER_APEX'])
+        self._TRANSFER_SIZE = int(transfer_hyperparams['TRANSFER_SIZE'])
         self._THETA_MAX = transfer_hyperparams['THETA_MAX']
         self._THETA_MIN = transfer_hyperparams['THETA_MIN']
         self._THETA_DECAY = transfer_hyperparams['THETA_DECAY']
         self._THETA_DIFF = transfer_hyperparams['THETA_MAX'] - transfer_hyperparams['THETA_MIN']
-        self._TRANSFER_DISC = transfer_hyperparams['TRANSFER_DISC']
+        self._TRANSFER_DISC = int(transfer_hyperparams['TRANSFER_DISC'])
         self._states = self._discretizer.get_bins()
         self._state_visits = [None] * n_instances
     

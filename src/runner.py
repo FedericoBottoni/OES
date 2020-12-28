@@ -282,7 +282,8 @@ def run_wparams(verbose, nn_params=None, t_params=None):
             c_plot.plot_state_actions(env_disc, select_action_bound, policy_net[best_env], action_dict_tags)
     
     # dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode, total_reward, verbose)
-    return total_reward.sum()
+    tot_receiving_rew = [(0 if i%2 == 0 else total_reward[i]) for i in range(len(total_reward))]
+    return np.array(tot_receiving_rew).sum()
 
 
 def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, cm_reward, n_instances, i_step, verbose):

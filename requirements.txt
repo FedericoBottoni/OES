@@ -9,3 +9,4 @@ tensorboard==2.3.0
 --find-links https://download.pytorch.org/whl/torch_stable.html
 torch==1.6.0+cpu
 torchvision==0.7.0+cpu
+pyGPGO==0.4.0.dev1

@@ -54,14 +54,14 @@ def run_wparams(verbose, nn_params=None, t_params=None):
     BATCH_SIZE = hyperparams['BATCH_SIZE']
     GAMMA = hyperparams['GAMMA']
     
-    TRANSFER_BUFFER_SIZE = transfer_hyperparams['TRANSFER_BUFFER_SIZE']
-    TRANSFER_INTERVAL = transfer_hyperparams['TRANSFER_INTERVAL']
-    TRANSFER_DISC = transfer_hyperparams['TRANSFER_DISC']
-    TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
+    TRANSFER_BUFFER_SIZE = int(transfer_hyperparams['TRANSFER_BUFFER_SIZE'])
+    TRANSFER_INTERVAL = int(transfer_hyperparams['TRANSFER_INTERVAL'])
+    TRANSFER_DISC = int(transfer_hyperparams['TRANSFER_DISC'])
+    TRANSFER_APEX = int(transfer_hyperparams['TRANSFER_APEX'])
     THETA_MAX = transfer_hyperparams['THETA_MAX']
     THETA_MIN = transfer_hyperparams['THETA_MIN']
-    TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
-    n_instances = transfer_hyperparams['N_PROCESSES']
+    TRANSFER_APEX = int(transfer_hyperparams['TRANSFER_APEX'])
+    n_instances = int(transfer_hyperparams['N_PROCESSES'])
     
     env = [None] * n_instances
     observation = [None] * n_instances
@@ -80,11 +80,12 @@ def run_wparams(verbose, nn_params=None, t_params=None):
     ptl = PTL(enable_transfer, n_instances, gym_environment, env_disc, transfer_hyperparams)
     c_plot = CustomPlot(enable_plots, ptl, n_instances)
     es = EarlyStopping(n_instances, ES_REWARD, ES_RANGE)
-    
-    print('Running', n_instances, 'processes')
-    if(enable_transfer):
-        print('Transfer enabled, THETA between', THETA_MIN, '-', THETA_MAX, 'with APEX on ep.', TRANSFER_APEX, \
-            'every', TRANSFER_INTERVAL, 'steps')
+
+    if verbose > 0:
+        print('Running', n_instances, 'processes')
+        if(enable_transfer):
+            print('Transfer enabled, THETA between', THETA_MIN, '-', THETA_MAX, 'with APEX on ep.', TRANSFER_APEX, \
+                'every', TRANSFER_INTERVAL, 'steps')
 
     # if gpu is to be used
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -225,7 +226,7 @@ def run_wparams(verbose, nn_params=None, t_params=None):
             loss[p] = optimize_model(p, c_plot, i_episode, procs_done)
 
             if done:
-                if verbose:
+                if verbose == 2:
                     print('Env#', p, 'has solved ep#', i_episode[p])
                 ep_cm_reward_dict = sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, \
                      cm_reward, n_instances, ep_step, verbose)
@@ -241,9 +242,9 @@ def run_wparams(verbose, nn_params=None, t_params=None):
                 target_net[p].load_state_dict(policy_net[p].state_dict())
                 
             if p == 0 and i_step % 1000 == 0:
-                if verbose:
+                if verbose == 2:
                     print('Epsilon', get_epsilon(i_step), 'at step', i_step)
-                else:
+                elif verbose == 1:
                     print(str(round((i_episode.sum() / (n_instances * num_episodes)) * 100, 2)), '%')
             
             if early_stop:
@@ -273,7 +274,7 @@ def run_wparams(verbose, nn_params=None, t_params=None):
             break
 
     end = time.time()
-    if verbose:
+    if verbose == 2:
         print('Time elapsed', int(end - start), 's')
         if obs_length == 2:
             best_env = 0
@@ -295,7 +296,7 @@ def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, cm_rewa
         removed = np.array(ep_cm_reward_dict[ep_key])
         cm_rws = [i[0] for i in removed]
         lens = [i[1] for i in removed]
-        if verbose:
+        if verbose == 2:
             print('Closing episode', ep_key, 'with cm_rew', cm_rws)
         c_plot.push_ar_cm_reward_ep(cm_rws)
         c_plot.push_ar_episode_len(lens)
@@ -305,13 +306,14 @@ def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, cm_rewa
 
 def dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode, total_reward, verbose):
     if save_model:
-        print('Reward earned:', total_reward)
-        print('Avg reward earned:', total_reward.mean())
+        if verbose > 0:
+            print('Reward earned:', total_reward)
+            print('Avg reward earned:', total_reward.mean())
         for p in range(n_instances):
             path = save_model_path + str(p) + '.pth'
             torch.save(policy_net[p].state_dict(), path)
             env[p].close()
-            if verbose:
+            if verbose == 2:
                 print('Model #', p, 'saved in:', path)
                 print('Closing env #', p, 'at episode', i_episode[p])
     c_plot.dispose()

@@ -1,3 +1,3 @@
-from src.runner import run
+from src.runner import run_wparams
 
-run()
+run_wparams(verbose=False)

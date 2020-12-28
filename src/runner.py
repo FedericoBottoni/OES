@@ -27,7 +27,8 @@ Discretizer = {
     "CartPoleCustom-v0": CartPoleDiscretizer
 }
 
-def run():
+def run_wparams(verbose, nn_params=None, t_params=None):
+
     start = time.time()
     with open('config.json') as json_file:
         config = json.load(json_file)
@@ -39,14 +40,29 @@ def run():
         ES_RANGE = config['stop_condition']['n_episodes']
         save_model = config['save_model']['active']
         enable_transfer = config['enable_transfer']
-        transfer_hyperparams = config['transfer_hyperparams']
-        hyperparams = config['network_hyperparams']
+        STATE_DIM_BINS = config['STATE_DIM_BINS']
         if save_model:
             save_model_path = config['save_model']['path']
 
-    n_instances = transfer_hyperparams['N_PROCESSES']
-    TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
+        transfer_hyperparams = t_params if not t_params is None else config['transfer_hyperparams']
+        hyperparams = nn_params if not nn_params is None else config['network_hyperparams']
 
+    ALPHA = hyperparams['ALPHA']
+    EPS_END = hyperparams['EPS_END']
+    EPS_DECAY = hyperparams['EPS_DECAY']
+    EPS_START = hyperparams['EPS_START']
+    BATCH_SIZE = hyperparams['BATCH_SIZE']
+    GAMMA = hyperparams['GAMMA']
+    
+    TRANSFER_BUFFER_SIZE = transfer_hyperparams['TRANSFER_BUFFER_SIZE']
+    TRANSFER_INTERVAL = transfer_hyperparams['TRANSFER_INTERVAL']
+    TRANSFER_DISC = transfer_hyperparams['TRANSFER_DISC']
+    TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
+    THETA_MAX = transfer_hyperparams['THETA_MAX']
+    THETA_MIN = transfer_hyperparams['THETA_MIN']
+    TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
+    n_instances = transfer_hyperparams['N_PROCESSES']
+    
     env = [None] * n_instances
     observation = [None] * n_instances
     policy_net = [None] * n_instances
@@ -55,21 +71,6 @@ def run():
     replay_memory = [None] * n_instances
     transfer_memory = [None] * n_instances
     state = [None] * n_instances
-    
-    ALPHA = hyperparams['ALPHA']
-    EPS_END = hyperparams['EPS_END']
-    EPS_DECAY = hyperparams['EPS_DECAY']
-    EPS_START = hyperparams['EPS_START']
-    BATCH_SIZE = hyperparams['BATCH_SIZE']
-    GAMMA = hyperparams['GAMMA']
-    STATE_DIM_BINS = config['STATE_DIM_BINS']
-    
-    TRANSFER_BUFFER_SIZE = transfer_hyperparams['TRANSFER_BUFFER_SIZE']
-    TRANSFER_INTERVAL = transfer_hyperparams['TRANSFER_INTERVAL']
-    TRANSFER_DISC = transfer_hyperparams['TRANSFER_DISC']
-    TRANSFER_APEX = transfer_hyperparams['TRANSFER_APEX']
-    THETA_MAX = transfer_hyperparams['THETA_MAX']
-    THETA_MIN = transfer_hyperparams['THETA_MIN']
     
     for i in range(n_instances):
         env[i] = gym.make(gym_environment)
@@ -182,7 +183,7 @@ def run():
     procs_done = np.zeros([n_instances])
     transfer_received_sizes = np.zeros([n_instances])
     
-    atexit.register(dispose, c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
+    atexit.register(dispose, c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode, verbose)
     for i_step in count():
         for p in range(n_instances):
             if procs_done[p] == 1:
@@ -222,9 +223,10 @@ def run():
             loss[p] = optimize_model(p, c_plot, i_episode, procs_done)
 
             if done:
-                print('Env#', p, 'has solved ep#', i_episode[p])
+                if verbose:
+                    print('Env#', p, 'has solved ep#', i_episode[p])
                 ep_cm_reward_dict = sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, \
-                     cm_reward, n_instances, ep_step)
+                     cm_reward, n_instances, ep_step, verbose)
                 early_stop = es.eval_stop_condition(p, cm_reward[p])
                 cm_reward[p] = 0
                 ep_step[p] = 0
@@ -235,8 +237,11 @@ def run():
             if i_episode[p] % hyperparams['TARGET_UPDATE'] == 0:
                 target_net[p].load_state_dict(policy_net[p].state_dict())
                 
-            if p == 0 and i_step % 2000 == 0:
-                print('Epsilon', get_epsilon(i_step), 'at step', i_step)
+            if p == 0 and i_step % 1000 == 0:
+                if verbose:
+                    print('Epsilon', get_epsilon(i_step), 'at step', i_step)
+                else:
+                    print(str(round((i_episode.sum() / (n_instances * num_episodes)) * 100, 2)), '%')
             
             if early_stop:
                 es.on_stop(p)
@@ -265,16 +270,17 @@ def run():
             break
 
     end = time.time()
-    print('Time elapsed', int(end - start), 's')
-    if obs_length == 2:
-        best_env = 0
-        select_action_bound = lambda st : select_action(best_env, st, 0, apply_eps=False).item()
-        c_plot.plot_state_actions(env_disc, select_action_bound, policy_net[best_env], action_dict_tags)
+    if verbose:
+        print('Time elapsed', int(end - start), 's')
+        if obs_length == 2:
+            best_env = 0
+            select_action_bound = lambda st : select_action(best_env, st, 0, apply_eps=False).item()
+            c_plot.plot_state_actions(env_disc, select_action_bound, policy_net[best_env], action_dict_tags)
     
-    dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode)
+    dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode, verbose)
 
 
-def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, cm_reward, n_instances, i_step):
+def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, cm_reward, n_instances, i_step, verbose):
     ep_key = str(i_episode[p])
     if not ep_key in ep_cm_reward_dict:
         ep_cm_reward_dict[ep_key] = [[None, None]] * n_instances
@@ -285,19 +291,21 @@ def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, cm_rewa
         removed = np.array(ep_cm_reward_dict[ep_key])
         cm_rws = [i[0] for i in removed]
         lens = [i[1] for i in removed]
-        print('Closing episode', ep_key, 'with cm_rew', cm_rws)
+        if verbose:
+            print('Closing episode', ep_key, 'with cm_rew', cm_rws)
         c_plot.push_ar_cm_reward_ep(cm_rws)
         c_plot.push_ar_episode_len(lens)
         c_plot.add_episode()
         ep_cm_reward_dict.pop(ep_key)
     return ep_cm_reward_dict
 
-def dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode):
+def dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode, verbose):
     if save_model:
         for p in range(n_instances):
             path = save_model_path + str(p) + '.pth'
             torch.save(policy_net[p].state_dict(), path)
-            print('Model #', p, 'saved in:', path)
             env[p].close()
-            print('Closing env #', p, 'at episode', i_episode[p])
+            if verbose:
+                print('Model #', p, 'saved in:', path)
+                print('Closing env #', p, 'at episode', i_episode[p])
     c_plot.dispose()

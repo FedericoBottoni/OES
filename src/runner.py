@@ -182,8 +182,10 @@ def run_wparams(verbose, nn_params=None, t_params=None):
     ep_cm_reward_dict = {}
     procs_done = np.zeros([n_instances])
     transfer_received_sizes = np.zeros([n_instances])
+    total_reward = np.zeros([n_instances])
     
-    atexit.register(dispose, c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode, verbose)
+    atexit.register(dispose, c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode, \
+        total_reward, verbose)
     for i_step in count():
         for p in range(n_instances):
             if procs_done[p] == 1:
@@ -227,6 +229,7 @@ def run_wparams(verbose, nn_params=None, t_params=None):
                     print('Env#', p, 'has solved ep#', i_episode[p])
                 ep_cm_reward_dict = sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, \
                      cm_reward, n_instances, ep_step, verbose)
+                total_reward[p] += cm_reward[p]
                 early_stop = es.eval_stop_condition(p, cm_reward[p])
                 cm_reward[p] = 0
                 ep_step[p] = 0
@@ -277,7 +280,8 @@ def run_wparams(verbose, nn_params=None, t_params=None):
             select_action_bound = lambda st : select_action(best_env, st, 0, apply_eps=False).item()
             c_plot.plot_state_actions(env_disc, select_action_bound, policy_net[best_env], action_dict_tags)
     
-    dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode, verbose)
+    # dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode, total_reward, verbose)
+    return total_reward.sum()
 
 
 def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, cm_reward, n_instances, i_step, verbose):
@@ -299,8 +303,10 @@ def sync_cm_rewards(p, c_plot, ep_cm_reward_dict, i_episode, procs_done, cm_rewa
         ep_cm_reward_dict.pop(ep_key)
     return ep_cm_reward_dict
 
-def dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode, verbose):
+def dispose(c_plot, save_model, save_model_path, policy_net, n_instances, env, start, i_episode, total_reward, verbose):
     if save_model:
+        print('Reward earned:', total_reward)
+        print('Avg reward earned:', total_reward.mean())
         for p in range(n_instances):
             path = save_model_path + str(p) + '.pth'
             torch.save(policy_net[p].state_dict(), path)

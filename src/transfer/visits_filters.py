@@ -51,6 +51,7 @@ class PTL():
         actions = values.max(1)[1]
         sending_knowledge = []
         for i_state in range(len(selected_states)):
+            self._virtual_env.reset()
             self._virtual_env.set_state(tuple(selected_states[i_state].numpy()))
             observation, reward, _, _ = self._virtual_env.step(actions[i_state].item())
             sending_knowledge.append(Transition( \
@@ -71,8 +72,8 @@ class PTL():
             if len(replay_memory[p]) < self._TRANSFER_SIZE:
                     transitions.append([])
             else:
-                transitions.append(replay_memory[p].memory[-self._TRANSFER_SIZE:]) # BL
-                # transitions.append(self.provide_transitions(p, policy_net[p])) # EXP1
+                # transitions.append(replay_memory[p].memory[-self._TRANSFER_SIZE:]) # BL
+                transitions.append(self.provide_transitions(p, policy_net[p])) # EXP1
         return transitions
 
 

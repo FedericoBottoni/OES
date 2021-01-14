@@ -46,13 +46,18 @@ def rforest(evaluate_network, params, acquisition_function='ExpectedImprovement'
 def evaluate_model(constants, **sampling_params):
     params = {**sampling_params, **constants}
     # print("Evaluating", sampling_params)
-    return run_wparams(verbose=0, t_params=params)
+    rew = run_wparams(verbose=0, t_params=params)
+    with open('out/hp_sampling_log.txt', "a") as log:
+        log.write(json.dumps(sampling_params) + " " + str(rew) + "\n")
+    return rew
 
 def hp_sampling():
     best_params, best_acc = None, 0
     surrogates = [gproc, rforest]
     params = OrderedDict()
     constants = {}
+    with open('out/hp_sampling_log.txt', "w") as log:
+        log.write("")
     with open('auto_config.json') as json_file:
         autoconfig = json.load(json_file)
         constants = autoconfig["constant"]
@@ -67,4 +72,6 @@ def hp_sampling():
             best_acc = next_acc
             best_params = next_params
     print('Sampled', best_params, 'with score', best_acc)
+    with open('out/hp_sampling_log.txt', "a") as log:
+        log.write('Sampled ' + json.dumps(best_params) + ' with score ' + str(best_acc))
     return best_params

@@ -56,7 +56,7 @@ def run_wparams(verbose, nn_params=None, t_params=None):
     
     TRANSFER_BUFFER_SIZE = int(transfer_hyperparams['TRANSFER_BUFFER_SIZE'])
     TRANSFER_INTERVAL = int(transfer_hyperparams['TRANSFER_INTERVAL'])
-    TRANSFER_DISC = int(transfer_hyperparams['TRANSFER_DISC'])
+    # TRANSFER_DISC = int(transfer_hyperparams['TRANSFER_DISC'])
     TRANSFER_APEX = int(transfer_hyperparams['TRANSFER_APEX'])
     THETA_MAX = transfer_hyperparams['THETA_MAX']
     THETA_MIN = transfer_hyperparams['THETA_MIN']

@@ -1,6 +1,6 @@
 {
     "gym_environment": "CartPoleCustom-v0",
-    "enable_plots": true,
+    "enable_plots": false,
     "training_episodes": 150,
     "max_steps": 500,
     "stop_condition": {
@@ -21,7 +21,8 @@
         "THETA_DECAY": 125,
         "THETA_MAX": 0.5,
         "THETA_MIN": 0.03,
-        "TRANSFER_DISC": 15
+        "ENCODED_SIZE": 128,
+        "TRANSFER_DISC": 10
     },
     "network_hyperparams": {
         "BATCH_SIZE": 64,

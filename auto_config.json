@@ -2,9 +2,9 @@
     "sample": {
         "TRANSFER_SIZE": [5, 100],
         "TRANSFER_INTERVAL": [10, 500],
-        "TRANSFER_BUFFER_SIZE": [100, 1000],
+        "TRANSFER_BUFFER_SIZE": [100, 10000],
         "TRANSFER_APEX" : [1, 150],
-        "TRANSFER_DISC":  [10, 20],
+        "TRANSFER_DISC":  [7, 15],
         "THETA_DECAY": [50, 500]
     },
     "constant": {

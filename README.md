@@ -1,6 +1,6 @@
 # Online Experience Sharing (OES)
 
-> DESCRIPTION
+> This project consists in Online Experience Sharing, a framework establishing communications among Deep Reinforcement Learning agents to highlight the Transfer Learning improvements brought by the experience to transfer selection methods, state confidence systems and transfer frequencies and sizes. Details available in the related document.
 
 ## Requirements
 

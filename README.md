@@ -24,14 +24,25 @@ Select the scenario to test among the available branches:
 * State Random Network Distillation (S-RND)
 * State-Action Random Network Distillation (Q-RND)
 
-Otherwise select BL_TT to run the one-brain baseline 
-
+Otherwise select "BL_TT" to run the one-brain baseline or "VT-AutoML" to run parameters tuning through Bayesian Optimisation.
 
 ## Configure and run the experiments
+Customize the called functions from "provide_transfer" (for SSM) and "gather_transfer" for (RSM) in the related transfer module:
+* VT: transfer/visits_filters.py
+* SRND: transfer/rnd_filters.py
+* QRND: transfer/q_rnd_filters.py
 
+Successively run the main entry point:
 
 ```bash
 python main.py
+```
+
+## Run Bayesian Optimisation
+Select "VT-AutoML" branch, configure auto_config.json for parameters' ranges and run the following entry point:
+
+```bash
+python hp_sampling.py
 ```
 
 ## Author
